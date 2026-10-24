@@ -274,61 +274,6 @@ function MoneyWatch({ data }) {
   );
 }
 
-function CheckMessage({ refresh }) {
-  const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState(null);
-
-  const check = async () => {
-    if (!text.trim()) return;
-    setBusy(true);
-    const r = await post("/api/analyze", { source: "paste", text });
-    setResult(r);
-    setBusy(false);
-    refresh();
-  };
-
-  return (
-    <section aria-labelledby="check-h">
-      <h2 id="check-h">Check a message</h2>
-      <p className="section-note">Paste a text, chat or letter. Works for slow scams like pig butchering too.</p>
-      <label htmlFor="msg" className="section-note" style={{ display: "block", margin: "0 0 6px" }}>
-        Message to check
-      </label>
-      <textarea id="msg" value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste the message here" />
-      <div className="actions">
-        <button className="btn btn-primary" onClick={check} disabled={busy || !text.trim()}>
-          {busy ? "Checking…" : "Check this message"}
-        </button>
-      </div>
-      {result && !result.error && (
-        <div className="verdict" data-risk={result.risk} aria-live="polite">
-          <strong>
-            {result.risk === "high" ? "Likely scam" : result.risk === "medium" ? "Suspicious" : "Looks OK"}
-            {result.scamTypeName ? `: ${result.scamTypeName}` : ""}
-          </strong>
-          {result.explanationForElder}
-          {result.stage && (
-            <>
-              <div className="stage" aria-label={`Pig butchering stage ${result.stage} of 4`}>
-                {[1, 2, 3, 4].map((n) => (
-                  <span key={n} data-on={n <= result.stage} />
-                ))}
-              </div>
-              <div className="tl-meta">
-                Pig butchering stage {result.stage} of 4:{" "}
-                {["friendly stranger", "building trust", "investment pitch", "pressure to pay"][result.stage - 1]}
-              </div>
-            </>
-          )}
-          <Signs cues={result.cues} />
-        </div>
-      )}
-      {result?.error && <div className="verdict" data-risk="medium">{result.error}</div>}
-    </section>
-  );
-}
-
 function Outbox({ data }) {
   return (
     <section aria-labelledby="out-h">
@@ -463,7 +408,6 @@ export default function Dashboard() {
         </div>
         <div className="col">
           <MoneyWatch data={data} />
-          <CheckMessage refresh={refresh} />
           <Outbox data={data} />
         </div>
       </main>

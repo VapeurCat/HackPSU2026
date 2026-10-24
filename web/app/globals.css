@@ -460,47 +460,6 @@ mark {
   padding: 7px 12px;
 }
 
-/* ---------- Check a message ---------- */
-textarea {
-  width: 100%;
-  min-height: 120px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 10px 12px;
-  background: var(--surface);
-  resize: vertical;
-}
-.verdict {
-  margin-top: 12px;
-  padding: 12px 14px;
-  border-radius: var(--radius-sm);
-}
-.verdict[data-risk="high"] {
-  background: var(--danger-bg);
-}
-.verdict[data-risk="medium"] {
-  background: var(--warn-bg);
-}
-.verdict[data-risk="low"] {
-  background: var(--safe-bg);
-}
-.verdict strong {
-  display: block;
-}
-.stage {
-  display: flex;
-  gap: 4px;
-  margin-top: 8px;
-}
-.stage span {
-  flex: 1;
-  height: 8px;
-  border-radius: 4px;
-  background: var(--line);
-}
-.stage span[data-on="true"] {
-  background: var(--danger);
-}
 
 /* ---------- Outbox and demo ---------- */
 .mail {
