@@ -14,10 +14,17 @@ async function call(path, body) {
 
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   if (msg.type === "ANALYZE") {
-    call("/api/analyze", { source: "web", url: msg.url, title: msg.title, text: msg.text })
+    call("/api/analyze", { source: "web", url: msg.url, title: msg.title, text: msg.text, sensitiveForm: msg.sensitiveForm })
       .then(reply)
       .catch((e) => reply({ error: e.message }));
     return true; // keep the channel open for the async reply
+  }
+
+  if (msg.type === "EMAIL_CHECK") {
+    call("/api/analyze", { source: "gmail", sender: msg.sender, subject: msg.subject, text: msg.text })
+      .then(reply)
+      .catch((e) => reply({ error: e.message }));
+    return true;
   }
 
   if (msg.type === "SCRUTINIZE") {

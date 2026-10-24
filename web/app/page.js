@@ -445,6 +445,7 @@ function DevMenu({ data, refresh }) {
             <li><a href="/demo/injection.html" target="_blank">Page that tries to fool the AI</a></li>
             <li><a href="/demo/safe-store.html" target="_blank">Gift card store (quiet, unless right after a scam)</a></li>
             <li><a href="/demo/bank-transfer.html" target="_blank">Bank: send money (pauses right after a scam)</a></li>
+            <li><a href="/demo/lookalike-login.html?kg-host=arnazon.com" target="_blank">Lookalike address: arnazon.com sign-in</a></li>
           </ul>
 
           <button className="btn btn-danger" onClick={reset} disabled={busy}>

@@ -16,6 +16,7 @@ const KinGuardUI = (() => {
     .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; color: #55706a; margin-bottom: 14px; }
     h1 { font-size: 34px; line-height: 1.15; margin: 0 0 14px; }
     .say { font-size: 22px; line-height: 1.45; margin: 0 0 18px; }
+    .say a { color: #1b5fd1; font-weight: 700; white-space: nowrap; }
     .signs-h { font-weight: 700; font-size: 17px; margin: 0 0 8px; }
     ul { margin: 0 0 20px; padding-left: 22px; font-size: 17px; line-height: 1.5; }
     li { margin-bottom: 4px; }
@@ -110,6 +111,12 @@ const KinGuardUI = (() => {
     current = null;
   }
 
+  // On a lookalike address, offer the real site.
+  function realSiteLink(v) {
+    const official = v.lookalike?.official;
+    return official ? ` <a href="https://${esc(official)}" rel="noopener noreferrer">Go to the real ${esc(official)}</a>` : "";
+  }
+
   // Tell the family what the person chose (only once the backend has created an alert).
   function decide(v, decision) {
     if (v.alertId) chrome.runtime.sendMessage({ type: "DECISION", alertId: v.alertId, decision });
@@ -124,7 +131,7 @@ const KinGuardUI = (() => {
         <div class="card">
           <div class="brand">${SHIELD} KinGuard</div>
           <h1 id="kg-h">Stop. This looks like a scam.</h1>
-          <p class="say" id="kg-say">${esc(v.explanationForElder)}</p>
+          <p class="say" id="kg-say">${esc(v.explanationForElder)}${realSiteLink(v)}</p>
           ${
             signs.length
               ? `<p class="signs-h">Warning signs we found</p><ul>${signs
@@ -163,7 +170,7 @@ const KinGuardUI = (() => {
       <div class="banner" role="status">
         ${SHIELD}
         <p><strong>KinGuard:</strong> ${esc(v.explanationForElder || "Something here looks suspicious. Take your time.")}
-          <a href="${esc(learn.url)}" target="_blank" rel="noopener noreferrer">Learn more</a></p>
+          ${realSiteLink(v)} <a href="${esc(learn.url)}" target="_blank" rel="noopener noreferrer">Learn more</a></p>
         <button class="secondary" data-act="speak">🔊 Read</button>
         <button class="secondary" data-act="ok">OK</button>
       </div>`;

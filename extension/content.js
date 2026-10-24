@@ -16,12 +16,36 @@
     return (document.body?.innerText || "").slice(0, 20000);
   }
 
+  // Does the page ask for a password or card number? Matters most on a lookalike address.
+  function hasSensitiveForm() {
+    return Boolean(
+      document.querySelector('input[type="password"], input[autocomplete^="cc-"], input[name*="card" i], input[name*="cvv" i], input[id*="card" i]')
+    );
+  }
+
+  // Demo only: on the local demo server, ?kg-host=arnazon.com pretends the page is on that address.
+  const demoHost = location.hostname === "localhost" ? new URLSearchParams(location.search).get("kg-host") : null;
+  const host = demoHost || location.hostname;
+  const pageUrl = demoHost ? `https://${demoHost}${location.pathname}` : location.href;
+
   function check() {
     if (isSearchPage()) return;
     const text = pageText();
-    if (text.length < 40 || text === sentText) return;
+    const look = KinGuardRules.lookalikeDomain(host);
+    // Fake sign-in pages often have very little text, so a lookalike address is checked regardless.
+    if ((text.length < 40 && !look) || text === sentText) return;
 
-    const local = KinGuardRules.analyze(text);
+    const sensitiveForm = hasSensitiveForm();
+    const local = KinGuardRules.analyze(text, { url: pageUrl, sensitiveForm });
+
+    // A lookalike address alone gets a small banner once per site per visit, so it never nags.
+    const seenKey = `kinguard-lookalike-${host}`;
+    if (look && local.risk === "medium") {
+      try {
+        if (sessionStorage.getItem(seenKey)) return;
+        sessionStorage.setItem(seenKey, "1");
+      } catch {}
+    }
 
     // A payment page (gift cards, crypto, wire, Zelle) isn't a scam by itself, so money words alone
     // don't warn here. Instead, ask the backend whether a scam warning happened recently: if so, pause.
@@ -42,9 +66,10 @@
 
     // A high-risk page is warned about right away, then upgraded with the AI's answer.
     // A mildly suspicious page waits for the AI, which can clear it, so ordinary pages don't flash a warning.
-    if (local.risk === "high") KinGuardUI.show(local, { pending: true });
+    // A lookalike address is a fact, not a guess, so its banner shows right away too.
+    if (local.risk === "high" || look) KinGuardUI.show(local, { pending: true });
 
-    chrome.runtime.sendMessage({ type: "ANALYZE", url: location.href, title: document.title, text }, (verdict) => {
+    chrome.runtime.sendMessage({ type: "ANALYZE", url: pageUrl, title: document.title, text, sensitiveForm }, (verdict) => {
       if (chrome.runtime.lastError || !verdict || verdict.error) {
         KinGuardUI.show(local, { pending: false }); // backend offline: fall back to the local warning
         return;

@@ -80,6 +80,8 @@ Bonus moments:
 - `/demo/safe-store.html` is a normal gift card store. On its own, KinGuard stays quiet, which shows it isn't paranoid. Right after a scam warning, it pauses before you pay.
 - `/demo/bank-transfer.html` is a fictional bank's Send money page. **Send payment** records a simulated transaction, the way a bank feed would.
 - `/demo/crypto-atm.html` triggers the crypto ATM hard rule.
+- `/demo/lookalike-login.html?kg-host=arnazon.com` pretends to be on a lookalike address (the `kg-host` trick only works on the local demo server). With its password box, KinGuard shows a full warning with a link to the real amazon.com. A lookalike address without a password or card form gets a small banner instead, once per visit.
+- Gmail: opened emails are checked automatically. Only suspicious ones go to the server for the AI check, and the warning appears inside the email. Try sending yourself an email from a free account with the sender name "Amazon Security".
 
 ### Fake scam email for the Gmail demo
 
@@ -94,7 +96,8 @@ Send this to yourself from a second account:
 1. **Rules first (instant, offline).** `rules.js` scores 14 social engineering cues (urgency, authority, fear, secrecy, untraceable payment, payment apps, moving to another app, remote access, code requests, too good to be true, emotional bonding, overpayment, fee to withdraw, call this number). Hard rules always mean high risk: crypto ATM requests, secrecy plus money, payment apps plus pressure, moving apps plus money, remote access plus pressure.
 2. **Gemini second.** It tags the same cues with exact quotes and writes plain-language explanations. It can raise the risk but never lower what the hard rules decided, which protects against prompt injection.
 3. **Correlation.** A scam warning plus a flagged payment (gift cards, crypto, wires, payment apps to new people) within 2 hours creates a "scam in progress" alert and emails, texts and calls the family.
-4. **Pause before you pay.** A payment page (gift cards, crypto, wires, payment apps) within 2 hours of a high-risk warning is paused, and the family is alerted before any money moves.
+4. **Where it came from.** Lookalike addresses (arnazon.com, paypal-account-verify.com, paypal.com.login-check.xyz) and senders pretending to be a well-known company are facts the AI can't overrule. Official brand sites and .gov sites are never warned about. Long pages are scored by section, so warning signs only count when they appear close together.
+5. **Pause before you pay.** A payment page (gift cards, crypto, wires, payment apps) within 2 hours of a high-risk warning is paused, and the family is alerted before any money moves.
 
 Check the rules any time with `npm run test-rules` inside `web/`.
 

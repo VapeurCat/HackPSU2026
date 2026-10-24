@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in</title>
+<style>
+  body { margin: 0; font-family: Arial, sans-serif; background: #f6f6f6; color: #222; }
+  .box { max-width: 340px; margin: 60px auto; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 26px; }
+  h1 { font-size: 24px; margin: 0 0 16px; }
+  label { display: block; font-size: 14px; font-weight: bold; margin: 12px 0 4px; }
+  input { width: 100%; box-sizing: border-box; padding: 9px; border: 1px solid #aaa; border-radius: 4px; font: inherit; }
+  button { margin-top: 18px; width: 100%; padding: 10px; border: 0; border-radius: 4px; background: #444; color: #fff; font: inherit; font-weight: bold; }
+  .note { text-align: center; font-size: 12px; color: #888; margin: 0 20px 30px; }
+</style>
+</head>
+<body>
+  <div class="box">
+    <h1>Sign in</h1>
+    <form onsubmit="return false">
+      <label for="email">Email or mobile phone number</label>
+      <input id="email" type="email" autocomplete="off">
+      <label for="pw">Password</label>
+      <input id="pw" type="password" autocomplete="off">
+      <button type="submit">Sign in</button>
+    </form>
+  </div>
+  <p class="note">KinGuard demo page. Nothing you type is sent anywhere. Open it with ?kg-host=arnazon.com to make KinGuard treat it as a lookalike address (works only on the local demo server).</p>
+</body>
+</html>

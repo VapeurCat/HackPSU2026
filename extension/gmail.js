@@ -1,5 +1,5 @@
-// KinGuard for Gmail: adds a "Scrutinize this email" button above every opened email.
-// Clicking it runs the AI check and always emails the trusted family member.
+// KinGuard for Gmail: checks every opened email quietly, warning inside the email only if it looks like a scam,
+// and adds a "Scrutinize this email" button that runs the AI check and always emails the trusted family member.
 // Gmail's class names (.a3s, .gD, h2.hP) are unofficial and may change; they work as of now.
 (() => {
   const STYLE = {
@@ -30,7 +30,7 @@
       <div style="font-size:14px">${esc(KinGuardRules.HELP.text)}</div><ul style="margin:4px 0;padding-left:20px;font-size:14px">${KinGuardRules.HELP.links.map(a).join("")}</ul></div></details>`;
   }
 
-  function render(result, v) {
+  function render(result, v, { auto = false } = {}) {
     if (!v || v.error) {
       result.innerHTML = "Couldn't check right now. Ask a family member before you act on this email.";
       return;
@@ -47,7 +47,39 @@
       <div>${esc(v.explanationForElder || "")}</div>
       ${signs ? `<ul style="margin:8px 0 0;padding-left:20px">${signs}</ul>` : ""}
       ${guideLinks(v)}
-      ${v.notified ? `<div style="margin-top:8px;color:#23784f;font-weight:700">✓ We sent this to ${esc(v.familyName || "your family")} for a second opinion.</div>` : ""}`;
+      ${
+        v.notified
+          ? `<div style="margin-top:8px;color:#23784f;font-weight:700">✓ ${auto ? `We've let ${esc(v.familyName || "your family")} know. You're not in trouble.` : `We sent this to ${esc(v.familyName || "your family")} for a second opinion.`}</div>`
+          : ""
+      }`;
+  }
+
+  // Every opened email is checked on this computer first, for free. Only suspicious ones go to
+  // KinGuard's server for the AI check, and a warning appears inside the email only if something is wrong.
+  function autoCheck(body, bar, result) {
+    const sender = findSender(body);
+    const subject = document.querySelector("h2.hP")?.innerText || "";
+    const text = `Subject: ${subject}\n\n${body.innerText.slice(0, 12000)}`;
+    const local = KinGuardRules.analyze(text, { sender });
+    if (local.risk === "low") return;
+
+    const plain = bar.style.cssText;
+    const warn = (v) => {
+      bar.style.borderColor = v.risk === "high" ? "#b42318" : "#c98a12";
+      bar.style.background = v.risk === "high" ? "#fce9e7" : "#fbf0dc";
+      render(result, v, { auto: true });
+    };
+    if (local.risk === "high") warn(local); // show right away, then add the AI's explanation
+
+    chrome.runtime.sendMessage({ type: "EMAIL_CHECK", sender, subject, text }, (v) => {
+      if (chrome.runtime.lastError || !v || v.error) return warn(local); // server offline: rules only
+      if (v.risk === "low") {
+        bar.style.cssText = plain; // the AI cleared it
+        result.innerHTML = "";
+        return;
+      }
+      warn(v);
+    });
   }
 
   function addButtons() {
@@ -65,6 +97,7 @@
       const btn = bar.querySelector("button");
       const result = bar.querySelector("div");
       body.parentElement.insertBefore(bar, body);
+      autoCheck(body, bar, result);
 
       btn.onclick = () => {
         btn.disabled = true;

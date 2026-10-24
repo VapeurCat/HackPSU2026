@@ -27,6 +27,15 @@ const AI_CUE_LABELS = {
   call_this_number: "Pushing you to call a number",
   manipulating_the_ai: "Hidden text trying to fool the AI",
   blackmail: "Threatening to expose you",
+  account_phishing: "Pressure to sign in or verify your account",
+  fake_charge: "A charge, renewal or refund you didn't expect",
+  legal_threat: "Legal, tax, toll or debt threat",
+  job_offer: "A job, school or money offer that's too easy",
+  upfront_fee: "Pay a fee first to get something",
+  dangerous_file: "Pushing you to open a file, link or code",
+  payment_redirect: "Changing where money goes",
+  boss_request: "Urgent favor from a boss or coworker",
+  impersonated_company: "Pretending to be a well-known company",
 };
 
 const LOCAL_TO_AI = {
@@ -40,6 +49,15 @@ const LOCAL_TO_AI = {
   feeToWithdraw: "fee_to_withdraw",
   callNumber: "call_this_number",
   cryptoAtm: "crypto_atm",
+  accountPhish: "account_phishing",
+  fakeCharge: "fake_charge",
+  legalThreat: "legal_threat",
+  jobOffer: "job_offer",
+  upfrontFee: "upfront_fee",
+  dangerousFile: "dangerous_file",
+  paymentRedirect: "payment_redirect",
+  bossRequest: "boss_request",
+  brandSpoof: "impersonated_company",
 };
 
 function mergeVerdicts(local, ai) {
@@ -48,7 +66,9 @@ function mergeVerdicts(local, ai) {
   // AI can raise risk. It can clear a mild (medium) warning that no hard rule triggered,
   // such as pushy ad wording on a normal page, but never lower a high-risk verdict.
   const aiRisk = ["low", "medium", "high"].includes(ai.risk) ? ai.risk : "low";
-  const aiCanClear = local.risk === "medium" && !local.hardRules.length && aiRisk === "low";
+  // A lookalike address or a fake company sender is a fact about where it came from, so the AI can't clear it.
+  const pinned = local.cues.some((c) => c.cue === "lookalike" || c.cue === "brandSpoof");
+  const aiCanClear = local.risk === "medium" && !local.hardRules.length && !pinned && aiRisk === "low";
   const risk = aiCanClear ? "low" : maxRisk(local.risk, aiRisk);
 
   const seen = new Set(local.cues.map((c) => LOCAL_TO_AI[c.cue] || c.cue));
@@ -58,6 +78,12 @@ function mergeVerdicts(local, ai) {
 
   const aiType = ai.scam_type && ai.scam_type !== "none" ? ai.scam_type : null;
   const typeName = aiType ? aiType.charAt(0).toUpperCase() + aiType.slice(1) : local.scamTypeName;
+
+  // When the warning stands but the AI rated it lower (it only sees the text, not a fake address
+  // or a hard rule), use KinGuard's own wording, so the warning never says "this looks fine."
+  if (risk !== "low" && RANK[aiRisk] < RANK[risk]) {
+    return { ...local, risk, cues: [...local.cues, ...extra], aiUsed: true };
+  }
 
   return {
     ...local,
@@ -170,7 +196,7 @@ async function notifyFamily(db, { heading, subject, explanation, cues, details =
  */
 export async function analyzeContent(input, { forceAI = false, alwaysNotify = false } = {}) {
   const db0 = load();
-  const local = analyze(input.text);
+  const local = analyze(input.text, { sender: input.sender, url: input.url, sensitiveForm: input.sensitiveForm });
 
   let ai = null;
   let aiError = null;
@@ -184,7 +210,8 @@ export async function analyzeContent(input, { forceAI = false, alwaysNotify = fa
   }
   const verdict = mergeVerdicts(local, ai);
 
-  const shouldSave = verdict.risk !== "low" || input.source !== "web";
+  // Everyday pages and emails that turn out fine aren't logged. Checks someone asked for always are.
+  const shouldSave = verdict.risk !== "low" || input.source === "paste" || alwaysNotify;
   let event = null;
   let alert = null;
 
@@ -270,6 +297,7 @@ export async function analyzeContent(input, { forceAI = false, alwaysNotify = fa
     hardRules: verdict.hardRules,
     stage: verdict.stage,
     guideKey: verdict.guideKey,
+    lookalike: verdict.lookalike || null,
     explanationForElder: verdict.explanationForElder,
     explanationForFamily: verdict.explanationForFamily,
     aiUsed: verdict.aiUsed,
