@@ -1,0 +1,20 @@
+{
+  "name": "kinguard-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "sync-rules": "node -e \"require('fs').copyFileSync('../extension/rules.js','lib/rules.cjs')\"",
+    "predev": "npm run sync-rules",
+    "prebuild": "npm run sync-rules",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test-rules": "node scripts/test-rules.cjs"
+  },
+  "dependencies": {
+    "@google/genai": "^2.31.0",
+    "next": "^16.4.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  }
+}

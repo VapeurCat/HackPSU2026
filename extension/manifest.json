@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "KinGuard",
+  "version": "0.1.0",
+  "description": "Spots scams, explains them in plain language, and lets your family know.",
+  "permissions": ["storage"],
+  "host_permissions": ["http://localhost:3000/*"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "exclude_matches": [
+        "https://mail.google.com/*",
+        "http://localhost:3000/",
+        "http://localhost:3000/api/*"
+      ],
+      "js": ["rules.js", "overlay.js", "content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["gmail.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
