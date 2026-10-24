@@ -2,6 +2,8 @@
 import { GoogleGenAI } from "@google/genai";
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+// Used once if the main model is overloaded, rate limited or slow.
+const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.5-flash-lite";
 const TIMEOUT_MS = 15000;
 const cache = new Map(); // same text twice (demo reruns) = no second API call
 
@@ -18,16 +20,29 @@ function withTimeout(promise, ms) {
   ]);
 }
 
+function isBusy(e) {
+  return /\b(503|429)\b|UNAVAILABLE|RESOURCE_EXHAUSTED|overloaded|high demand|timed out/i.test(String(e?.message || e));
+}
+
 async function generateJSON(prompt) {
   client ??= new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  const res = await withTimeout(
-    client.models.generateContent({
-      model: MODEL,
-      contents: prompt,
-      config: { responseMimeType: "application/json", temperature: 0.2 },
-    }),
-    TIMEOUT_MS
-  );
+  const call = (model) =>
+    withTimeout(
+      client.models.generateContent({
+        model,
+        contents: prompt,
+        config: { responseMimeType: "application/json", temperature: 0.2 },
+      }),
+      TIMEOUT_MS
+    );
+  let res;
+  try {
+    res = await call(MODEL);
+  } catch (e) {
+    if (!FALLBACK_MODEL || FALLBACK_MODEL === MODEL || !isBusy(e)) throw e;
+    console.warn(`[KinGuard] ${MODEL} busy, trying ${FALLBACK_MODEL}`);
+    res = await call(FALLBACK_MODEL);
+  }
   const raw = (res.text || "").replace(/^```(json)?\s*|\s*```$/g, "");
   return JSON.parse(raw);
 }

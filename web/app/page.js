@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const POLL_MS = 3000;
 
@@ -39,7 +39,7 @@ function Shield() {
   );
 }
 
-function StatusBand({ data }) {
+function StatusBand({ data, refresh }) {
   const name = data.person.name;
   const family = data.family[0]?.name || "you";
   const open = data.alerts.filter((a) => a.status === "open");
@@ -71,10 +71,7 @@ function StatusBand({ data }) {
           <span className="brand-name">
             <Shield /> KinGuard
           </span>
-          <span className="config" aria-label="Connections">
-            <span>{data.config.gemini ? "Gemini on" : "Rules only (add a Gemini key)"}</span>
-            <span>{data.config.email ? "Email on" : "Email in demo mode"}</span>
-          </span>
+          <DevMenu data={data} refresh={refresh} />
         </div>
         <h1 className="status-line" aria-live="polite">
           {line}
@@ -252,14 +249,7 @@ function Timeline({ data }) {
   );
 }
 
-function MoneyWatch({ data, refresh }) {
-  const [busy, setBusy] = useState(false);
-  const simulate = async (preset) => {
-    setBusy(true);
-    await post("/api/transactions", { preset });
-    await refresh();
-    setBusy(false);
-  };
+function MoneyWatch({ data }) {
   return (
     <section aria-labelledby="money-h">
       <h2 id="money-h">Money watch</h2>
@@ -279,20 +269,6 @@ function MoneyWatch({ data, refresh }) {
             ))}
           </tbody>
         </table>
-        <div className="sim" aria-label="Simulate a purchase">
-          <button className="btn" disabled={busy} onClick={() => simulate("giftcards")}>
-            Simulate $500 gift cards
-          </button>
-          <button className="btn" disabled={busy} onClick={() => simulate("cryptoatm")}>
-            Simulate $2,000 crypto ATM
-          </button>
-          <button className="btn" disabled={busy} onClick={() => simulate("zelle")}>
-            Simulate $1,200 Zelle
-          </button>
-          <button className="btn" disabled={busy} onClick={() => simulate("groceries")}>
-            Simulate normal groceries
-          </button>
-        </div>
       </div>
     </section>
   );
@@ -358,7 +334,7 @@ function Outbox({ data }) {
     <section aria-labelledby="out-h">
       <h2 id="out-h">Emails to {data.family[0]?.name || "family"}</h2>
       <p className="section-note">
-        {data.config.email ? "Sent through Resend." : "Demo mode: emails are recorded here. Add a Resend key to send them for real."}
+        {data.config.email ? "Alerts sent by email." : "Alerts are saved here while email sending is off."}
       </p>
       <div className="panel">
         {data.outbox.length === 0 && <div className="tl-meta">No emails yet.</div>}
@@ -375,30 +351,76 @@ function Outbox({ data }) {
   );
 }
 
-function DemoTools({ refresh }) {
+// Developer and demo controls, kept out of sight behind the DEV menu in the header.
+function DevMenu({ data, refresh }) {
+  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const reset = async () => {
-    if (!confirm("Clear all alerts, timeline events and emails?")) return;
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => ref.current && !ref.current.contains(e.target) && setOpen(false);
+    const onKey = (e) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const run = async (fn) => {
     setBusy(true);
-    await post("/api/reset");
+    await fn();
     await refresh();
     setBusy(false);
   };
+  const simulate = (preset) => run(() => post("/api/transactions", { preset }));
+  const reset = () => {
+    if (!confirm("Clear all alerts, timeline events and emails?")) return;
+    run(() => post("/api/reset"));
+  };
+
   return (
-    <section aria-labelledby="demo-h">
-      <h2 id="demo-h">Demo pages</h2>
-      <p className="section-note">Fictional scam pages for testing the extension. Open them in another window.</p>
-      <ul className="demo-links">
-        <li><a href="/demo/tech-support.html" target="_blank">Fake virus pop-up</a></li>
-        <li><a href="/demo/crypto-atm.html" target="_blank">Fake tax office: crypto ATM</a></li>
-        <li><a href="/demo/investment.html" target="_blank">Fake crypto investment (pig butchering)</a></li>
-        <li><a href="/demo/injection.html" target="_blank">Page that tries to fool the AI</a></li>
-        <li><a href="/demo/safe-store.html" target="_blank">Normal gift card store (should stay quiet)</a></li>
-      </ul>
-      <button className="btn btn-danger" onClick={reset} disabled={busy}>
-        Reset demo
+    <div className="dev" ref={ref}>
+      <button className="dev-toggle" aria-expanded={open} aria-controls="dev-panel" onClick={() => setOpen((o) => !o)}>
+        <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+          <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+        DEV
       </button>
-    </section>
+      {open && (
+        <div className="dev-panel" id="dev-panel" role="region" aria-label="Developer tools">
+          <h3>Connections</h3>
+          <ul className="dev-status">
+            <li data-on={data.config.gemini}>{data.config.gemini ? "Gemini on" : "Rules only (add a Gemini key)"}</li>
+            <li data-on={data.config.email}>{data.config.email ? "Email on" : "Email in demo mode (add a Resend key)"}</li>
+            <li data-on={data.config.voice}>{data.config.voice ? "ElevenLabs voice on" : "Browser voice (add an ElevenLabs key)"}</li>
+          </ul>
+
+          <h3>Simulate a purchase</h3>
+          <div className="sim">
+            <button className="btn" disabled={busy} onClick={() => simulate("giftcards")}>$500 gift cards</button>
+            <button className="btn" disabled={busy} onClick={() => simulate("cryptoatm")}>$2,000 crypto ATM</button>
+            <button className="btn" disabled={busy} onClick={() => simulate("zelle")}>$1,200 Zelle</button>
+            <button className="btn" disabled={busy} onClick={() => simulate("groceries")}>Normal groceries</button>
+          </div>
+
+          <h3>Demo pages</h3>
+          <ul className="demo-links">
+            <li><a href="/demo/tech-support.html" target="_blank">Fake virus pop-up</a></li>
+            <li><a href="/demo/crypto-atm.html" target="_blank">Fake tax office: crypto ATM</a></li>
+            <li><a href="/demo/investment.html" target="_blank">Fake crypto investment (pig butchering)</a></li>
+            <li><a href="/demo/injection.html" target="_blank">Page that tries to fool the AI</a></li>
+            <li><a href="/demo/safe-store.html" target="_blank">Normal gift card store (should stay quiet)</a></li>
+          </ul>
+
+          <button className="btn btn-danger" onClick={reset} disabled={busy}>
+            Reset demo
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -433,17 +455,16 @@ export default function Dashboard() {
 
   return (
     <>
-      <StatusBand data={data} />
+      <StatusBand data={data} refresh={refresh} />
       <main>
         <div className="col">
           <Alerts data={data} onStatus={setStatus} />
           <Timeline data={data} />
         </div>
         <div className="col">
-          <MoneyWatch data={data} refresh={refresh} />
+          <MoneyWatch data={data} />
           <CheckMessage refresh={refresh} />
           <Outbox data={data} />
-          <DemoTools refresh={refresh} />
         </div>
       </main>
     </>
