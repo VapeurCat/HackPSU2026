@@ -5,11 +5,19 @@
   let sentText = "";
   let payChecked = false;
 
+  // Search results pages list snippets and ads from many other sites ("act now", "call today"),
+  // which reads like pressure but isn't. Check the sites people actually open instead.
+  const SEARCH_HOST = /^(www\.)?(google\.(com|[a-z]{2}|co\.[a-z]{2}|com\.[a-z]{2})|bing\.com|duckduckgo\.com|html\.duckduckgo\.com|search\.yahoo\.com|search\.brave\.com|ecosia\.org|startpage\.com)$/i;
+  function isSearchPage() {
+    return SEARCH_HOST.test(location.hostname) && /^\/(search|html|web)?\/?$/i.test(location.pathname);
+  }
+
   function pageText() {
     return (document.body?.innerText || "").slice(0, 20000);
   }
 
   function check() {
+    if (isSearchPage()) return;
     const text = pageText();
     if (text.length < 40 || text === sentText) return;
 
@@ -32,12 +40,13 @@
     if (local.risk === "low") return;
     sentText = text;
 
-    // Show the local verdict right away, then upgrade it with the AI's answer.
-    KinGuardUI.show(local, { pending: true });
+    // A high-risk page is warned about right away, then upgraded with the AI's answer.
+    // A mildly suspicious page waits for the AI, which can clear it, so ordinary pages don't flash a warning.
+    if (local.risk === "high") KinGuardUI.show(local, { pending: true });
 
     chrome.runtime.sendMessage({ type: "ANALYZE", url: location.href, title: document.title, text }, (verdict) => {
       if (chrome.runtime.lastError || !verdict || verdict.error) {
-        KinGuardUI.show(local, { pending: false }); // backend offline: keep the local warning
+        KinGuardUI.show(local, { pending: false }); // backend offline: fall back to the local warning
         return;
       }
       KinGuardUI.show(verdict, { pending: false });

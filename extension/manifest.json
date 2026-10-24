@@ -19,7 +19,7 @@
     },
     {
       "matches": ["https://mail.google.com/*"],
-      "js": ["gmail.js"],
+      "js": ["rules.js", "gmail.js"],
       "run_at": "document_idle"
     }
   ]

@@ -78,13 +78,18 @@ const KinGuardRules = (() => {
       label: "Pushing you to call a number",
       re: /\bcall\b[\s\S]{0,60}?(\+?1[ .-]?)?\(?\d{3}\)?[ .-]?\d{3}[ .-]?\d{4}/i,
     },
+    blackmail: {
+      w: 3,
+      label: "Threatening to expose you",
+      re: /\b(recorded you (while|watching|doing)|(hacked|accessed|took over) your (webcam|camera|device|computer)|(intimate|embarrassing|compromising|explicit) (video|videos|photos?|pictures)|send (it|the video|them) to (all )?(of )?your (contacts|friends|family)|i (know|have) your password)\b/i,
+    },
   };
 
   // Crypto ATM: no real business, agency or bank asks for this. Always high risk.
   const CRYPTO_ATM = /\b((bitcoin|btc|crypto(currency)?) ?(atm|kiosk|machine)|coin ?flip|coinme|bitcoin depot)\b/i;
   const ATM_ACTION = /\b((deposit|insert|feed|put|bring|take)\b.{0,40}\b(cash|money|bills)|scan\b.{0,20}\b(qr|code)|wallet address)\b/i;
 
-  const PRESSURE = ["urgency", "fear", "secrecy", "authority", "tooGood", "bonding", "callNumber"];
+  const PRESSURE = ["urgency", "fear", "secrecy", "authority", "tooGood", "bonding", "callNumber", "blackmail"];
   const MONEY = ["untraceable", "paymentApp", "feeToWithdraw", "overpayment"];
 
   const ELDER_TEXT = {
@@ -106,6 +111,8 @@ const KinGuardRules = (() => {
       "Be careful. Money sent with apps like Zelle or Cash App is like cash. Once it's sent, it's usually gone for good.",
     platform_switch:
       "Be careful. Scammers often ask to move the conversation to another app, where it's harder to catch them.",
+    sextortion:
+      "This is a common scam email sent to millions of people at once. They don't have any video of you, and you did nothing wrong. Don't reply and don't pay.",
     generic:
       "This uses pressure tricks that scammers use. Don't pay, call, or share anything yet. Check with your family first.",
     suspicious:
@@ -122,9 +129,188 @@ const KinGuardRules = (() => {
     impersonation: "Government or bank impersonation",
     payment_app: "Payment app scam",
     platform_switch: "Move to another app",
+    sextortion: "Blackmail email scam (sextortion)",
     generic: "Possible scam",
     suspicious: "Suspicious content",
   };
+
+  // Plain-language guides for each scam type, with trusted sources (links checked October 2026).
+  const FTC = "https://consumer.ftc.gov";
+  const SRC = {
+    ftcAvoid: { name: "FTC: How to avoid a scam", url: `${FTC}/articles/how-avoid-scam` },
+    ftcPay: { name: "FTC: How someone asks you to pay can reveal a scam", url: `${FTC}/consumer-alerts/2026/07/way-spot-scams-how-someone-asks-you-pay` },
+    ftcTech: { name: "FTC: Tech support scams", url: `${FTC}/articles/how-spot-avoid-and-report-tech-support-scams` },
+    msTech: { name: "Microsoft: Protect yourself from tech support scams", url: "https://support.microsoft.com/en-us/windows/protect-yourself-from-tech-support-scams-2ebf91bd-f94c-2a8a-e541-f5c800d18435" },
+    ftcGift: { name: "FTC: Gift card scams", url: `${FTC}/articles/avoiding-and-reporting-gift-card-scams` },
+    ftcGov: { name: "FTC: Government impersonation scams", url: `${FTC}/articles/how-avoid-government-impersonation-scam` },
+    ssa: { name: "Social Security (Office of the Inspector General): Scam awareness", url: "https://oig.ssa.gov/scam-awareness/" },
+    irs: { name: "IRS: Recognize tax scams and fraud", url: "https://www.irs.gov/help/tax-scams/recognize-tax-scams-and-fraud" },
+    ftcRomance: { name: "FTC: Romance scams", url: `${FTC}/articles/what-know-about-romance-scams` },
+    ftcCrypto: { name: "FTC: Cryptocurrency scams", url: `${FTC}/articles/what-know-about-cryptocurrency-scams` },
+    ftcPrize: { name: "FTC: Fake prize, sweepstakes, and lottery scams", url: `${FTC}/articles/fake-prize-sweepstakes-and-lottery-scams` },
+    ftcApps: { name: "FTC: Avoiding scams on payment apps", url: `${FTC}/articles/mobile-payment-apps-how-avoid-scam-when-you-use-one` },
+    zelle: { name: "Zelle: Payment safety", url: "https://www.zelle.com/digital-payment-education" },
+    ftcGrand: { name: "FTC: Grandparent scams", url: `${FTC}/consumer-alerts/2021/04/dont-open-your-door-grandparent-scams` },
+    ftcBlackmail: { name: "FTC: Scam emails demand Bitcoin and threaten blackmail", url: `${FTC}/consumer-alerts/2020/04/scam-emails-demand-bitcoin-threaten-blackmail` },
+    cfpb: { name: "Consumer Financial Protection Bureau: Fraud and scams", url: "https://www.consumerfinance.gov/consumer-tools/fraud/" },
+  };
+
+  const GUIDES = {
+    tech_support: {
+      title: "Tech support scams",
+      what: "A fake warning pops up saying your computer has a virus or has been hacked, often with an alarm sound or a page you can't close. It tells you to call a number. The person who answers pretends to be from Microsoft, Apple or a security company, asks to connect to your computer, and then charges you for a repair you never needed.",
+      todo: [
+        "Don't call the number. Microsoft, Apple and other real companies never put phone numbers in pop-up warnings.",
+        "Close the page. If it won't close, restart the computer.",
+        "Never let someone you don't know connect to your computer.",
+      ],
+      sources: [SRC.ftcTech, SRC.msTech],
+    },
+    crypto_atm: {
+      title: "Crypto ATM scams",
+      what: "Someone pretending to be from the government, your bank or a company tells you to take cash to a Bitcoin machine, often at a gas station or convenience store, and scan a code they send you. The money goes straight to the scammer and can almost never be recovered.",
+      todo: [
+        "No real government office, bank or business will ever ask you to pay at a crypto ATM.",
+        "Hang up, then call the agency or bank using a number you look up yourself.",
+      ],
+      sources: [SRC.ftcCrypto, SRC.ftcPay],
+    },
+    investment: {
+      title: "Fake investments and \"pig butchering\"",
+      what: "A friendly stranger, often met through a \"wrong number\" text or social media, builds trust over weeks. Then they share an investment or crypto opportunity that seems to make big profits. The website showing your profits is fake, and when you try to take money out, you're told to pay a \"tax\" or \"fee\" first.",
+      todo: [
+        "Never invest because someone you've only met online recommends it.",
+        "Guaranteed returns are a warning sign. Real investments always carry risk.",
+        "Having to pay a fee to get your own money back means it's a scam. Don't pay more.",
+      ],
+      sources: [SRC.ftcCrypto, SRC.ftcRomance],
+    },
+    family_emergency: {
+      title: "Grandparent and family emergency scams",
+      what: "Someone calls or writes pretending to be a grandchild or relative in trouble (an arrest, an accident, a hospital) and begs you to send money fast and keep it secret. Scammers can find family names online and can even fake a loved one's voice.",
+      todo: [
+        "Hang up and call your family member directly, using the number you already have.",
+        "Ask another relative to check the story before you send anything.",
+        "Requests for gift cards, cash by courier or secrecy mean it's a scam.",
+      ],
+      sources: [SRC.ftcGrand, SRC.ftcGift],
+    },
+    prize: {
+      title: "Fake prize and lottery scams",
+      what: "You're told you won a prize, a lottery or a sweepstakes you don't remember entering, but you must pay a fee, taxes or shipping first, often with gift cards or a wire transfer.",
+      todo: [
+        "Real prizes are free. You never have to pay to collect one.",
+        "Don't give out bank details or pay any fee.",
+      ],
+      sources: [SRC.ftcPrize, SRC.ftcGift],
+    },
+    romance: {
+      title: "Romance and friendship scams",
+      what: "Someone you met online quickly becomes very affectionate, but always has a reason they can't meet in person or video chat. Eventually there's an emergency, a travel cost or an investment, and they ask for money, gift cards or crypto.",
+      todo: [
+        "Never send money to someone you haven't met in person.",
+        "Talk to a friend or family member about the relationship. Scammers often ask you to keep it private.",
+      ],
+      sources: [SRC.ftcRomance, SRC.ftcCrypto],
+    },
+    impersonation: {
+      title: "Government and bank impersonation scams",
+      what: "Someone claims to be from Social Security, the IRS, Medicare, the police or your bank's fraud department. They say there's a problem, like a suspended number, unpaid taxes or a hacked account, and that you must act now, keep it secret, or move your money to \"keep it safe.\"",
+      todo: [
+        "Government agencies don't demand payment by gift card, crypto, wire or payment app.",
+        "Your bank will never ask you to move your money to protect it.",
+        "Hang up and call the agency or bank yourself, using the number on their official website or your card.",
+      ],
+      sources: [SRC.ftcGov, SRC.ssa, SRC.irs],
+    },
+    payment_app: {
+      title: "Payment app scams",
+      what: "Scammers ask you to pay with Zelle, Cash App, Venmo or similar apps because the money moves instantly and works like cash. Once it's sent, it's usually gone for good, and these apps often can't reverse it.",
+      todo: [
+        "Only send money with these apps to people you know and trust in person.",
+        "Be suspicious of anyone who asks you to \"send it to yourself\" or to a new recipient to fix a problem.",
+      ],
+      sources: [SRC.ftcApps, SRC.zelle],
+    },
+    platform_switch: {
+      title: "Moving the conversation to another app",
+      what: "Scammers often ask to move from a website, dating app or email to WhatsApp, Telegram or text messages. Those apps are harder to monitor, and it makes it harder for anyone to step in.",
+      todo: [
+        "Be cautious when a stranger is eager to move to a private app.",
+        "Watch for the next steps: talk of money, investments or secrecy.",
+      ],
+      sources: [SRC.ftcRomance, SRC.ftcAvoid],
+    },
+    sextortion: {
+      title: "Blackmail email scams (sextortion)",
+      what: "An email claims someone hacked your webcam or computer and recorded you, and threatens to send an embarrassing video to your contacts unless you pay, usually in Bitcoin. Some include an old password from a past data breach to seem real. The same email is sent to millions of people. There is no video.",
+      todo: [
+        "Don't reply and don't pay. Paying only leads to more demands.",
+        "If the email shows a real password, change that password anywhere you still use it.",
+        "You did nothing wrong. It's fine, and smart, to tell someone you trust.",
+      ],
+      sources: [SRC.ftcBlackmail, SRC.ftcCrypto],
+    },
+    gift_cards: {
+      title: "Gift card scams",
+      what: "Scammers love gift cards because they're quick to buy and nearly impossible to trace or refund. They'll pretend to be a company, the government or a relative and ask you to buy cards and read them the numbers on the back.",
+      todo: [
+        "Anyone who asks you to pay with a gift card is a scammer.",
+        "Never read gift card numbers to someone over the phone.",
+      ],
+      sources: [SRC.ftcGift, SRC.ftcPay],
+    },
+    payment: {
+      title: "How scammers ask you to pay",
+      what: "Scammers push for payments that are fast and hard to undo: gift cards, crypto, wire transfers and payment apps like Zelle. Once the money is sent, getting it back is very hard. That's why KinGuard pauses here after a scam warning.",
+      todo: [
+        "If someone told you to make this payment, especially someone you've never met in person, stop.",
+        "If someone is on the phone telling you what to do, hang up.",
+        "Call a family member or your bank, using a number you look up yourself.",
+      ],
+      sources: [SRC.ftcPay, SRC.ftcGift, SRC.cfpb],
+    },
+    generic: {
+      title: "How to spot a scam",
+      what: "Most scams use the same tricks: pretending to be someone you trust, creating a problem or a prize, rushing you, asking you to keep it secret, and asking for a payment that's hard to undo.",
+      todo: [
+        "Slow down. Real organizations give you time.",
+        "Check by contacting the company or person directly, using a number you look up yourself.",
+        "Talk to someone you trust before you pay or share anything.",
+      ],
+      sources: [SRC.ftcAvoid, SRC.ftcPay],
+    },
+  };
+
+  // Where to get help, shown with every guide.
+  const HELP = {
+    text: "Already paid or shared information? Call your bank right away, then report it. AARP's free Fraud Watch Helpline can talk you through it: 877-908-3360.",
+    links: [
+      { name: "Report to the FTC (ReportFraud.ftc.gov)", url: "https://reportfraud.ftc.gov/" },
+      { name: "Report online fraud to the FBI (IC3)", url: "https://www.ic3.gov/" },
+      { name: "AARP Fraud Watch Helpline", url: "https://www.aarp.org/money/scams-fraud/helpline/" },
+    ],
+  };
+
+  // Match a scam type name (including the AI's free-text names) to a guide.
+  function guideFor(name) {
+    const n = String(name || "").toLowerCase();
+    if (!n) return null;
+    if (GUIDES[n]) return n;
+    if (/sextortion|blackmail/.test(n)) return "sextortion";
+    if (/(crypto|bitcoin) ?atm|kiosk/.test(n)) return "crypto_atm";
+    if (/tech|support|virus|pop-?up|computer/.test(n)) return "tech_support";
+    if (/pig|invest|trading|profit/.test(n)) return "investment";
+    if (/grand|family emergency|relative/.test(n)) return "family_emergency";
+    if (/prize|lottery|sweepstake/.test(n)) return "prize";
+    if (/romance|friendship|dating/.test(n)) return "romance";
+    if (/gift ?card/.test(n)) return "gift_cards";
+    if (/zelle|payment app|cash ?app|venmo/.test(n)) return "payment_app";
+    if (/impersonat|government|irs|social security|medicare|bank|police/.test(n)) return "impersonation";
+    if (/another app|telegram|whatsapp|platform/.test(n)) return "platform_switch";
+    if (/crypto|bitcoin/.test(n)) return "investment";
+    return null;
+  }
 
   function has(cues, names) {
     return cues.some((c) => names.includes(c.cue));
@@ -138,6 +324,7 @@ const KinGuardRules = (() => {
   function guessType(cues, hardRules, text) {
     const n = (x) => cues.some((c) => c.cue === x);
     if (hardRules.some((r) => r.rule === "crypto_atm")) return "crypto_atm";
+    if (n("blackmail")) return "sextortion";
     if (FAMILY_EMERGENCY.test(text)) return "family_emergency";
     if (n("remoteAccess") || (COMPUTER_THREAT.test(text) && (n("callNumber") || n("authority")))) return "tech_support";
     if (n("feeToWithdraw") || INVEST.test(text)) return "investment";
@@ -182,6 +369,10 @@ const KinGuardRules = (() => {
     if (has(cues, ["secrecy"]) && has(cues, MONEY)) {
       hardRules.push({ rule: "secrecy_plus_money" });
     }
+    // A blackmail threat plus a payment demand or a deadline is high risk.
+    if (has(cues, ["blackmail"]) && (has(cues, MONEY) || has(cues, ["urgency", "secrecy"]))) {
+      hardRules.push({ rule: "blackmail_plus_payment" });
+    }
     // Remote access or a code request plus any pressure is high risk.
     if (has(cues, ["remoteAccess", "codeRequest"]) && has(cues, PRESSURE)) {
       hardRules.push({ rule: "account_takeover_pattern" });
@@ -201,6 +392,7 @@ const KinGuardRules = (() => {
       scamType,
       stage: ["investment", "romance", "platform_switch"].includes(scamType) ? pigButcheringStage(cues, t) : null,
       scamTypeName: scamType ? TYPE_NAMES[scamType] : null,
+      guideKey: scamType ? (GUIDES[scamType] ? scamType : "generic") : null,
       explanationForElder: scamType ? ELDER_TEXT[scamType] : "",
       explanationForFamily: scamType
         ? `${TYPE_NAMES[scamType]}. Warning signs: ${cues.map((c) => c.label.toLowerCase()).join(", ")}.`
@@ -259,7 +451,7 @@ const KinGuardRules = (() => {
     return (RANK[a] ?? 0) >= (RANK[b] ?? 0) ? a : b;
   }
 
-  return { analyze, flagTransaction, paymentPage, maxRisk, RANK, TYPE_NAMES, ELDER_TEXT, CUES };
+  return { analyze, flagTransaction, paymentPage, guideFor, maxRisk, RANK, TYPE_NAMES, ELDER_TEXT, CUES, GUIDES, HELP };
 })();
 
 if (typeof module !== "undefined" && module.exports) module.exports = KinGuardRules;

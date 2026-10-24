@@ -2,6 +2,7 @@
 import { load } from "@/lib/db";
 import { geminiEnabled } from "@/lib/gemini";
 import { phoneEnabled } from "@/lib/phone";
+import KinGuardRules from "@/lib/rules.cjs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,8 @@ export async function GET() {
       voice: Boolean(process.env.ELEVENLABS_API_KEY),
       phone: phoneEnabled(),
     },
+    guides: KinGuardRules.GUIDES,
+    help: KinGuardRules.HELP,
     now: new Date().toISOString(),
   });
 }

@@ -14,6 +14,9 @@ const cases = [
   ["high", "This is your bank's fraud department. To protect your savings, send it to yourself with Zelle right away. Don't tell anyone."],
   ["high", "Your account shows $48,200 in profit! To withdraw, you must first pay a 20% tax to release your funds. Guaranteed returns, my dear."],
   ["high", "Let's move this to Telegram, I want to show you how I double your money with crypto, my love."],
+  ["low", "Grandpa, I recorded you a video of the game! You can watch it on the family page."],
+  ["high", "I hacked your webcam and recorded you while you were watching videos. Send $1,500 in Bitcoin within 48 hours or I will send it to all your contacts."],
+  ["high", "I know your password is sunshine22. I have an embarrassing video of you. Pay in bitcoin to this wallet or everyone sees it."],
   ["high", "We refunded too much to your account. Install AnyDesk so our support team can fix it immediately and send back the difference."],
 ];
 

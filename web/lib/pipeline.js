@@ -26,6 +26,7 @@ const AI_CUE_LABELS = {
   crypto_atm: "Crypto ATM payment",
   call_this_number: "Pushing you to call a number",
   manipulating_the_ai: "Hidden text trying to fool the AI",
+  blackmail: "Threatening to expose you",
 };
 
 const LOCAL_TO_AI = {
@@ -42,11 +43,13 @@ const LOCAL_TO_AI = {
 };
 
 function mergeVerdicts(local, ai) {
-  if (!ai) return { ...local, aiUsed: false, stage: local.stage || null };
+  if (!ai) return { ...local, aiUsed: false, stage: local.stage || null, guideKey: local.guideKey || null };
 
-  // AI can raise risk but never lower what the hard rules decided.
+  // AI can raise risk. It can clear a mild (medium) warning that no hard rule triggered,
+  // such as pushy ad wording on a normal page, but never lower a high-risk verdict.
   const aiRisk = ["low", "medium", "high"].includes(ai.risk) ? ai.risk : "low";
-  const risk = maxRisk(local.risk, aiRisk);
+  const aiCanClear = local.risk === "medium" && !local.hardRules.length && aiRisk === "low";
+  const risk = aiCanClear ? "low" : maxRisk(local.risk, aiRisk);
 
   const seen = new Set(local.cues.map((c) => LOCAL_TO_AI[c.cue] || c.cue));
   const extra = (ai.cues || [])
@@ -65,6 +68,7 @@ function mergeVerdicts(local, ai) {
       risk === "low" ? ai.explanation_for_elder || "" : ai.explanation_for_elder || local.explanationForElder || KinGuardRules.ELDER_TEXT.generic,
     explanationForFamily: ai.explanation_for_family || local.explanationForFamily,
     stage: Number(ai.pig_butchering_stage) || local.stage || null,
+    guideKey: risk === "low" ? null : KinGuardRules.guideFor(aiType) || local.guideKey || "generic",
     aiUsed: true,
   };
 }
@@ -113,6 +117,7 @@ export async function analyzeContent(input, { forceAI = false, alwaysNotify = fa
       scamTypeName: verdict.scamTypeName,
       cues: verdict.cues,
       stage: verdict.stage,
+      guideKey: verdict.guideKey,
       explanationForElder: verdict.explanationForElder,
       explanationForFamily: verdict.explanationForFamily,
       aiUsed: verdict.aiUsed,
@@ -139,6 +144,7 @@ export async function analyzeContent(input, { forceAI = false, alwaysNotify = fa
       eventIds: [event.id],
       txIds: [],
       cues: verdict.cues,
+      guideKey: verdict.guideKey,
       status: "open",
       notified: [],
     };
@@ -182,6 +188,7 @@ export async function analyzeContent(input, { forceAI = false, alwaysNotify = fa
     cues: verdict.cues,
     hardRules: verdict.hardRules,
     stage: verdict.stage,
+    guideKey: verdict.guideKey,
     explanationForElder: verdict.explanationForElder,
     explanationForFamily: verdict.explanationForFamily,
     aiUsed: verdict.aiUsed,
@@ -239,6 +246,7 @@ export async function recordTransaction(txInput) {
         eventIds: [event.id],
         txIds: [tx.id],
         cues: [],
+        guideKey: "payment",
         status: "open",
         notified: [],
       };
@@ -314,6 +322,7 @@ export async function checkCorrelation() {
     eventIds: [event.id],
     txIds: [tx.id],
     cues: event.cues || [],
+    guideKey: event.guideKey || "payment",
     minutesApart: minutes,
     status: "open",
     notified: [],
@@ -370,7 +379,7 @@ export async function payAttempt({ url, title, kind, label }) {
   const minutesAgo = Math.max(1, Math.round((now - Date.parse(scam.ts)) / 60000));
   const scamTypeName = scam.scamTypeName || "possible scam";
   const what = label || "making a payment";
-  const base = { pause: true, minutesAgo, scamTypeName, label: what, familyName };
+  const base = { pause: true, minutesAgo, scamTypeName, label: what, familyName, guideKey: "payment" };
   const mins = `${minutesAgo} minute${minutesAgo === 1 ? "" : "s"}`;
 
   // Reloading the same payment page shouldn't alert the family again.
@@ -401,6 +410,7 @@ export async function payAttempt({ url, title, kind, label }) {
     eventIds: [scam.id, event.id],
     txIds: [],
     cues: scam.cues || [],
+    guideKey: scam.guideKey || "payment",
     url: url || null,
     kindOfPayment: kind || null,
     decision: null,

@@ -18,6 +18,18 @@
     return el ? `${el.getAttribute("name") || el.innerText} <${el.getAttribute("email") || ""}>` : "";
   }
 
+  // Plain-language advice and trusted sources for the scam type (from rules.js).
+  function guideLinks(v) {
+    const g = v.risk !== "low" && KinGuardRules.GUIDES[v.guideKey || "generic"];
+    if (!g) return "";
+    const a = (s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer" style="color:#1b5fd1">${esc(s.name)}</a></li>`;
+    return `<details style="margin-top:10px"><summary style="cursor:pointer;font-weight:700">📖 What is this scam? How to stay safe</summary>
+      <div style="margin-top:6px"><strong>${esc(g.title)}</strong><div>${esc(g.what)}</div>
+      <ul style="margin:6px 0;padding-left:20px">${g.todo.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>
+      <div style="font-weight:700">Learn more</div><ul style="margin:4px 0;padding-left:20px">${g.sources.map(a).join("")}</ul>
+      <div style="font-size:14px">${esc(KinGuardRules.HELP.text)}</div><ul style="margin:4px 0;padding-left:20px;font-size:14px">${KinGuardRules.HELP.links.map(a).join("")}</ul></div></details>`;
+  }
+
   function render(result, v) {
     if (!v || v.error) {
       result.innerHTML = "Couldn't check right now. Ask a family member before you act on this email.";
@@ -34,6 +46,7 @@
       <div style="font-size:18px;font-weight:700">${icon} ${head}</div>
       <div>${esc(v.explanationForElder || "")}</div>
       ${signs ? `<ul style="margin:8px 0 0;padding-left:20px">${signs}</ul>` : ""}
+      ${guideLinks(v)}
       ${v.notified ? `<div style="margin-top:8px;color:#23784f;font-weight:700">✓ We sent this to ${esc(v.familyName || "your family")} for a second opinion.</div>` : ""}`;
   }
 

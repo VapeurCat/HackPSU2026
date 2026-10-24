@@ -48,7 +48,7 @@ async function generateJSON(prompt) {
 }
 
 const CUE_LIST =
-  "urgency, authority, fear, secrecy, untraceable_payment, payment_app, platform_switch, remote_access, code_request, too_good_to_be_true, emotional_bonding, overpayment, fee_to_withdraw, crypto_atm, call_this_number, manipulating_the_ai";
+  "urgency, authority, fear, secrecy, untraceable_payment, payment_app, platform_switch, remote_access, code_request, too_good_to_be_true, emotional_bonding, overpayment, fee_to_withdraw, crypto_atm, call_this_number, blackmail, manipulating_the_ai";
 
 export async function analyzeWithGemini({ text, source, url, sender, subject, elderName }) {
   const key = `${source}|${sender || ""}|${subject || ""}|${text}`;
@@ -78,7 +78,7 @@ If the content is a conversation, decide whether it matches the pig butchering p
 Return JSON only, in this shape:
 {
   "risk": "low" | "medium" | "high",
-  "scam_type": "short name such as tech support scam, gift card scam, crypto ATM scam, fake investment, romance scam, impersonation, or none",
+  "scam_type": "short name such as tech support scam, gift card scam, crypto ATM scam, fake investment, romance scam, impersonation, grandparent scam, sextortion, or none",
   "cues": [{ "cue": "one of the cue names", "quote": "exact phrase" }],
   "pig_butchering_stage": 1 | 2 | 3 | 4 | null,
   "explanation_for_elder": "1 to 2 calm, simple sentences telling them what this is and what to do. No jargon.",

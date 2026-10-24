@@ -315,6 +315,30 @@ mark {
   background: var(--danger-bg);
   color: var(--danger);
 }
+.guide {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  font-size: 15px;
+}
+.guide summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.guide p,
+.guide ul {
+  margin: 8px 0;
+}
+.guide a {
+  color: var(--focus);
+}
+.guide-sources,
+.guide-help {
+  font-size: 14px;
+  color: var(--muted);
+}
 .notified {
   margin-top: 12px;
   font-size: 14px;

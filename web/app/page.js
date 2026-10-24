@@ -101,6 +101,46 @@ function Signs({ cues }) {
   );
 }
 
+// Plain-language explanation of the scam type, with trusted sources, for the family.
+function Guide({ guide, help }) {
+  if (!guide) return null;
+  return (
+    <details className="guide">
+      <summary>About this scam: {guide.title}</summary>
+      <p>{guide.what}</p>
+      <ul>
+        {guide.todo.map((t, i) => (
+          <li key={i}>{t}</li>
+        ))}
+      </ul>
+      <div className="guide-sources">
+        Learn more:{" "}
+        {guide.sources.map((s, i) => (
+          <span key={s.url}>
+            {i > 0 && " · "}
+            <a href={s.url} target="_blank" rel="noopener noreferrer">
+              {s.name}
+            </a>
+          </span>
+        ))}
+      </div>
+      {help && (
+        <p className="guide-help">
+          {help.text}{" "}
+          {help.links.map((l, i) => (
+            <span key={l.url}>
+              {i > 0 && " · "}
+              <a href={l.url} target="_blank" rel="noopener noreferrer">
+                {l.name}
+              </a>
+            </span>
+          ))}
+        </p>
+      )}
+    </details>
+  );
+}
+
 function AlertCard({ alert, data, onStatus }) {
   const events = alert.eventIds.map((id) => data.events.find((e) => e.id === id)).filter(Boolean);
   const txs = (alert.txIds || []).map((id) => data.transactions.find((t) => t.id === id)).filter(Boolean);
@@ -151,6 +191,8 @@ function AlertCard({ alert, data, onStatus }) {
       )}
 
       <Signs cues={alert.cues} />
+
+      <Guide guide={data.guides?.[alert.guideKey]} help={data.help} />
 
       {alert.status === "open" ? (
         <div className="actions">
