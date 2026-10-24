@@ -512,6 +512,10 @@ mark {
 .tx tr[data-flag="high"] td {
   background: var(--danger-bg);
 }
+/* The date sits on its own line under the vendor name, like the flag reason does. */
+.tx .tl-meta {
+  display: block;
+}
 .flag {
   display: block;
   font-size: 13px;
