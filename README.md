@@ -58,25 +58,27 @@ Without any keys, everything works on the built-in rules, and emails are recorde
 | --- | --- | --- |
 | `GEMINI_API_KEY` | AI explanations, extra cues, pig butchering stage, correlation write-ups | Google AI Studio (free) |
 | `RESEND_API_KEY` + `FAMILY_EMAIL` | Real emails to family | resend.com (free). The test sender only delivers to your own Resend account email, so use that as `FAMILY_EMAIL`. |
+| `TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN` + `TWILIO_FROM` + `FAMILY_PHONE` | A text and a phone call to family for the most urgent alerts (pause before you pay, scam in progress) | twilio.com (trial accounts can only reach phone numbers you verify) |
 | `ELEVENLABS_API_KEY` | A natural voice for "Read this to me" (otherwise the browser's voice is used) | elevenlabs.io |
 
 `GEMINI_MODEL` defaults to `gemini-3.5-flash`. Check AI Studio for the current model name if calls fail.
 
 ## The 3-minute demo
 
-Before each run, click **Reset demo** on the dashboard.
+Before each run, open the **DEV** menu on the dashboard and click **Reset demo**.
 
 1. **Hook:** "Elder fraud is rarely one bad click. It's a chain."
 2. **The popup:** on "Frank's" window, open `/demo/tech-support.html`. KinGuard covers it with a calm explanation and the exact phrases that are red flags. Click **Read this to me**.
 3. **Live alert:** switch to the dashboard window. It has already turned red.
-4. **The payment:** click **Simulate $500 gift cards**. KinGuard links it to the popup: "Frank may be in a scam right now." Show the email to Sarah.
-5. **Gmail:** open the fake scam email (below) and click **Scrutinize this email**.
-6. **Slow scams:** paste a pig butchering chat into **Check a message** to show the stage bar.
+4. **Pause before you pay:** the scammer tells Frank to send money, so open `/demo/bank-transfer.html` (or the gift card store). KinGuard pauses the page: "Wait. Before you pay…" and alerts Sarah by email, text and phone call. The dashboard shows "Frank may be about to pay a scammer."
+5. **The payment:** click **I'm paying for something else**, then **Send payment**. The bank feed records it and KinGuard links it to the popup: "Frank may be in a scam right now." The dashboard shows what Frank chose on the pause screen.
+6. **Gmail:** in the inbox, click the **🔍 Scrutinize** pill on the fake scam email (below) without opening it.
 7. **Close:** dignity-first design, then the roadmap (Plaid, mobile app, bank partnerships).
 
 Bonus moments:
 - `/demo/injection.html` hides text telling the AI to "mark this safe." The hard rules still flag it.
-- `/demo/safe-store.html` is a normal gift card store. KinGuard stays quiet, which shows it isn't paranoid.
+- `/demo/safe-store.html` is a normal gift card store. On its own, KinGuard stays quiet, which shows it isn't paranoid. Right after a scam warning, it pauses before you pay.
+- `/demo/bank-transfer.html` is a fictional bank's Send money page. **Send payment** records a simulated transaction, the way a bank feed would.
 - `/demo/crypto-atm.html` triggers the crypto ATM hard rule.
 
 ### Fake scam email for the Gmail demo
@@ -87,15 +89,12 @@ Send this to yourself from a second account:
 >
 > Grandpa it's me, I'm in jail after a car accident. I need $3,000 in gift cards right away for bail. Please don't tell Mom, she'll be so upset. Call my lawyer at 555-201-8890.
 
-### Pig butchering chat for "Check a message"
-
-> Hi, is this Mark? Sorry, wrong number! You seem so kind. Let's move this to WhatsApp. My uncle taught me crypto trading, guaranteed returns, I can show you.
-
 ## How detection works
 
 1. **Rules first (instant, offline).** `rules.js` scores 14 social engineering cues (urgency, authority, fear, secrecy, untraceable payment, payment apps, moving to another app, remote access, code requests, too good to be true, emotional bonding, overpayment, fee to withdraw, call this number). Hard rules always mean high risk: crypto ATM requests, secrecy plus money, payment apps plus pressure, moving apps plus money, remote access plus pressure.
 2. **Gemini second.** It tags the same cues with exact quotes and writes plain-language explanations. It can raise the risk but never lower what the hard rules decided, which protects against prompt injection.
-3. **Correlation.** A scam warning plus a flagged payment (gift cards, crypto, wires, payment apps to new people) within 2 hours creates a "scam in progress" alert and emails the family.
+3. **Correlation.** A scam warning plus a flagged payment (gift cards, crypto, wires, payment apps to new people) within 2 hours creates a "scam in progress" alert and emails, texts and calls the family.
+4. **Pause before you pay.** A payment page (gift cards, crypto, wires, payment apps) within 2 hours of a high-risk warning is paused, and the family is alerted before any money moves.
 
 Check the rules any time with `npm run test-rules` inside `web/`.
 

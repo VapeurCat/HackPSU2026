@@ -10,6 +10,7 @@
   .wrap { max-width: 720px; margin: 30px auto; padding: 0 20px; }
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
   .card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 18px; text-align: center; }
+  .card button { margin-top: 10px; font: inherit; padding: 6px 14px; border: 0; border-radius: 6px; background: #2e7d32; color: #fff; cursor: pointer; }
   .note { text-align: center; font-size: 12px; color: #888; margin: 30px; }
 </style>
 </head>
@@ -19,12 +20,12 @@
     <h1>Holiday gift cards</h1>
     <p>Gift cards make a perfect present for the grandkids. Pick a design, choose an amount, and pick it up at the front counter.</p>
     <div class="grid">
-      <div class="card">Snowflake<br>$25</div>
-      <div class="card">Birthday<br>$50</div>
-      <div class="card">Thank you<br>$100</div>
+      <div class="card">Snowflake<br>$25<br><button>Buy now</button></div>
+      <div class="card">Birthday<br>$50<br><button>Buy now</button></div>
+      <div class="card">Thank you<br>$100<br><button>Buy now</button></div>
     </div>
     <p>Store hours: 7 am to 9 pm daily. Questions? Ask any cashier.</p>
   </div>
-  <p class="note">KinGuard demo page. Hometown Market is fictional. This normal page should NOT trigger a warning.</p>
+  <p class="note">KinGuard demo page. Hometown Market is fictional. On its own, this normal page should NOT trigger a warning. Right after a scam warning, KinGuard pauses it (Pause before you pay).</p>
 </body>
 </html>

@@ -44,13 +44,18 @@ function StatusBand({ data, refresh }) {
   const family = data.family[0]?.name || "you";
   const open = data.alerts.filter((a) => a.status === "open");
   const correlated = open.find((a) => a.kind === "correlated");
+  const paying = open.find((a) => a.kind === "pay_attempt");
   const recentMedium = data.events.some((e) => e.risk === "medium" && Date.now() - Date.parse(e.ts) < 24 * 3600e3);
 
   let level = "safe";
   let line = `${name} looks safe.`;
   let sub = "No scam warnings right now. KinGuard is watching the browser, email and bank activity.";
 
-  if (correlated) {
+  if (paying && !correlated) {
+    level = "danger";
+    line = `${name} may be about to pay a scammer.`;
+    sub = `KinGuard paused a payment page at ${timeOf(paying.ts)} and alerted ${family}. Call ${name} now.`;
+  } else if (correlated) {
     level = "danger";
     line = `${name} may be in a scam right now.`;
     sub = `${correlated.title}. ${family} was emailed at ${timeOf(correlated.ts)}. Call ${name} before more money moves.`;
@@ -121,6 +126,12 @@ function AlertCard({ alert, data, onStatus }) {
       </div>
       <p>{alert.explanation}</p>
 
+      {alert.kind === "pay_attempt" && alert.decision && (
+        <p className="decision" data-decision={alert.decision}>
+          {data.person.name} {alert.decision === "closed" ? "closed the page" : "chose to continue anyway"} at {timeOf(alert.decidedAt)}.
+        </p>
+      )}
+
       {alert.kind === "correlated" && (
         <ol className="chain" aria-label="What happened">
           {events.map((e) => (
@@ -163,7 +174,8 @@ function AlertCard({ alert, data, onStatus }) {
 
       {alert.notified?.length > 0 && (
         <div className="notified">
-          Family emailed at {timeOf(alert.notified[0].ts)} ({alert.notified[0].status})
+          {data.family[0]?.name || "Family"} alerted at {timeOf(alert.notified[0].ts)} by{" "}
+          {[...new Set(alert.notified.map((n) => ({ sms: "text", call: "phone call" })[n.channel] || "email"))].join(", ")} ({alert.notified[0].status})
         </div>
       )}
     </article>
@@ -199,7 +211,7 @@ function Timeline({ data }) {
   const [filter, setFilter] = useState("all");
 
   const items = useMemo(() => {
-    const evs = data.events.map((e) => ({ ...e, kind: e.type === "transaction_flag" ? "money" : e.source === "gmail" ? "email" : "scam" }));
+    const evs = data.events.map((e) => ({ ...e, kind: e.type === "transaction_flag" || e.type === "payment_attempt" ? "money" : e.source === "gmail" ? "email" : "scam" }));
     const flaggedTxIds = new Set(data.events.filter((e) => e.txId).map((e) => e.txId));
     const txs = data.transactions
       .filter((t) => !flaggedTxIds.has(t.id))
@@ -277,12 +289,12 @@ function MoneyWatch({ data }) {
 function Outbox({ data }) {
   return (
     <section aria-labelledby="out-h">
-      <h2 id="out-h">Emails to {data.family[0]?.name || "family"}</h2>
+      <h2 id="out-h">Alerts sent to {data.family[0]?.name || "family"}</h2>
       <p className="section-note">
-        {data.config.email ? "Alerts sent by email." : "Alerts are saved here while email sending is off."}
+        {data.config.email || data.config.phone ? "Emails, texts and calls KinGuard sent." : "Alerts are saved here while email and phone sending are off."}
       </p>
       <div className="panel">
-        {data.outbox.length === 0 && <div className="tl-meta">No emails yet.</div>}
+        {data.outbox.length === 0 && <div className="tl-meta">No alerts sent yet.</div>}
         {data.outbox.slice(0, 6).map((m) => (
           <div className="mail" key={m.id}>
             <div className="mail-subject">{m.subject}</div>
@@ -340,6 +352,7 @@ function DevMenu({ data, refresh }) {
           <ul className="dev-status">
             <li data-on={data.config.gemini}>{data.config.gemini ? "Gemini on" : "Rules only (add a Gemini key)"}</li>
             <li data-on={data.config.email}>{data.config.email ? "Email on" : "Email in demo mode (add a Resend key)"}</li>
+            <li data-on={data.config.phone}>{data.config.phone ? "Texts and calls on" : "Texts and calls in demo mode (add Twilio keys)"}</li>
             <li data-on={data.config.voice}>{data.config.voice ? "ElevenLabs voice on" : "Browser voice (add an ElevenLabs key)"}</li>
           </ul>
 
@@ -357,7 +370,8 @@ function DevMenu({ data, refresh }) {
             <li><a href="/demo/crypto-atm.html" target="_blank">Fake tax office: crypto ATM</a></li>
             <li><a href="/demo/investment.html" target="_blank">Fake crypto investment (pig butchering)</a></li>
             <li><a href="/demo/injection.html" target="_blank">Page that tries to fool the AI</a></li>
-            <li><a href="/demo/safe-store.html" target="_blank">Normal gift card store (should stay quiet)</a></li>
+            <li><a href="/demo/safe-store.html" target="_blank">Gift card store (quiet, unless right after a scam)</a></li>
+            <li><a href="/demo/bank-transfer.html" target="_blank">Bank: send money (pauses right after a scam)</a></li>
           </ul>
 
           <button className="btn btn-danger" onClick={reset} disabled={busy}>

@@ -122,6 +122,52 @@ const KinGuardUI = (() => {
     root.querySelector('[data-act="speak"]').onclick = () => speak(v.explanationForElder);
   }
 
+  // "Pause before you pay": a payment page shortly after a scam warning.
+  function renderPause(v) {
+    const family = v.familyName || "your family";
+    const mins = `${v.minutesAgo} minute${v.minutesAgo === 1 ? "" : "s"} ago`;
+    const say = `KinGuard warned you about a ${String(v.scamTypeName).toLowerCase()} ${mins}. Scammers often tell people to pay right after, and this page is for ${v.label}. Are you paying because someone asked you to?`;
+    root.innerHTML = `<style>${CSS}</style>
+      <div class="scrim" role="alertdialog" aria-modal="true" aria-labelledby="kg-h" aria-describedby="kg-say">
+        <div class="card">
+          <div class="brand">${SHIELD} KinGuard</div>
+          <h1 id="kg-h">Wait. Before you pay…</h1>
+          <p class="say" id="kg-say">${esc(say)}</p>
+          <ul>
+            <li>Real companies, banks and government offices never ask for gift cards, crypto or wire transfers.</li>
+            <li>If someone is on the phone telling you what to do, hang up.</li>
+          </ul>
+          <div class="row">
+            <button class="primary" data-act="close">Close this page</button>
+            <button class="secondary" data-act="speak">🔊 Read this to me</button>
+            <button class="trust" data-act="continue">I'm paying for something else</button>
+          </div>
+          <div class="family">
+            ${v.notified ? `✓ We've let ${esc(family)} know. They'll call you soon. You're not in trouble.` : `Please talk to ${esc(family)} before you pay.`}
+          </div>
+        </div>
+      </div>`;
+    const decide = (decision) => v.alertId && chrome.runtime.sendMessage({ type: "PAY_DECISION", alertId: v.alertId, decision });
+    root.querySelector('[data-act="close"]').onclick = () => {
+      decide("closed");
+      chrome.runtime.sendMessage({ type: "CLOSE_TAB" });
+    };
+    root.querySelector('[data-act="speak"]').onclick = () => speak(`Wait. Before you pay. ${say}`);
+    root.querySelector('[data-act="continue"]').onclick = () => {
+      decide("continued");
+      close();
+    };
+    root.querySelector('[data-act="close"]').focus();
+  }
+
+  function pause(v) {
+    if (current?.risk === "high") return; // a scam warning is already showing
+    ensureRoot();
+    current = { risk: "high" }; // keep the fullscreen guard on
+    exitFullscreen();
+    renderPause(v);
+  }
+
   function show(v, { pending = false } = {}) {
     if (!v || v.risk === "low") return;
     // Never downgrade an open high-risk warning to a banner.
@@ -136,5 +182,5 @@ const KinGuardUI = (() => {
     }
   }
 
-  return { show, close };
+  return { show, pause, close };
 })();

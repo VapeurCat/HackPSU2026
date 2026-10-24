@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lionheart Community Bank - Send money</title>
+<style>
+  body { margin: 0; font-family: Arial, sans-serif; background: #f3f5f8; color: #1d2733; }
+  header { background: #123a6b; color: #fff; padding: 14px 28px; display: flex; justify-content: space-between; align-items: center; }
+  header strong { font-size: 20px; }
+  header span { font-size: 14px; opacity: .85; }
+  .wrap { max-width: 560px; margin: 32px auto; padding: 0 20px; }
+  .panel { background: #fff; border: 1px solid #d5dbe3; border-radius: 10px; padding: 24px 26px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .sub { color: #5b6878; margin: 0 0 20px; }
+  label { display: block; font-weight: bold; font-size: 14px; margin: 14px 0 6px; }
+  input, select { width: 100%; box-sizing: border-box; font: inherit; padding: 10px 12px; border: 1px solid #b8c2cf; border-radius: 6px; }
+  .new { display: inline-block; margin-top: 6px; font-size: 13px; color: #8a5a00; background: #fff4dc; padding: 2px 8px; border-radius: 999px; }
+  button { margin-top: 22px; width: 100%; font: inherit; font-weight: bold; font-size: 17px; padding: 12px; border: 0; border-radius: 6px; background: #123a6b; color: #fff; cursor: pointer; }
+  button:disabled { opacity: .6; cursor: default; }
+  .done { display: none; margin-top: 18px; padding: 14px; border-radius: 8px; background: #e6f4ea; color: #1e5631; }
+  .balance { font-size: 14px; color: #5b6878; margin-bottom: 16px; }
+  .note { text-align: center; font-size: 12px; color: #888; margin: 30px; }
+</style>
+</head>
+<body>
+  <header><strong>Lionheart Community Bank</strong><span>Signed in as Frank</span></header>
+  <div class="wrap">
+    <div class="panel">
+      <h1>Send money</h1>
+      <p class="sub">Send money to a person or business from your checking account.</p>
+      <div class="balance">Checking ••4417 · Available $8,312.55</div>
+      <form id="f">
+        <label for="payee">Recipient</label>
+        <input id="payee" value="Account Services">
+        <span class="new">New recipient: first time sending</span>
+
+        <label for="method">Method</label>
+        <select id="method">
+          <option value="Zelle">Zelle (arrives in minutes)</option>
+          <option value="Wire">Wire transfer (same day)</option>
+        </select>
+
+        <label for="amount">Amount</label>
+        <input id="amount" type="number" min="1" step="0.01" value="1200">
+
+        <label for="memo">Memo (optional)</label>
+        <input id="memo" value="">
+
+        <button id="send" type="submit">Send payment</button>
+      </form>
+      <div class="done" id="done" role="status"></div>
+    </div>
+  </div>
+  <p class="note">KinGuard demo page. Lionheart Community Bank is fictional and no money moves. "Send payment" records a simulated transaction on the family dashboard, the way a bank feed would.</p>
+<script>
+  document.getElementById("f").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("send");
+    const payee = document.getElementById("payee").value.trim() || "Unknown recipient";
+    const method = document.getElementById("method").value;
+    const amount = Number(document.getElementById("amount").value) || 0;
+    btn.disabled = true;
+    btn.textContent = "Sending…";
+    await fetch("/api/transactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        merchant: method === "Wire" ? `Wire transfer to "${payee}"` : `Zelle to new payee "${payee}"`,
+        category: "Transfer",
+        amount,
+        newPayee: true,
+      }),
+    }).catch(() => {});
+    const done = document.getElementById("done");
+    done.textContent = `Payment of $${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} sent to ${payee}.`;
+    done.style.display = "block";
+    btn.textContent = "Sent";
+  });
+</script>
+</body>
+</html>

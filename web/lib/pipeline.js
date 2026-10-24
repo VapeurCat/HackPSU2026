@@ -3,9 +3,11 @@ import KinGuardRules from "./rules.cjs";
 import { load, update, newId } from "./db.js";
 import { analyzeWithGemini, explainCorrelation, geminiEnabled } from "./gemini.js";
 import { buildAlertEmail, sendFamilyEmail } from "./email.js";
+import { alertFamilyByPhone } from "./phone.js";
 
 const { analyze, flagTransaction, maxRisk, RANK } = KinGuardRules;
 const CORRELATION_WINDOW_MIN = 120;
+const PAUSE_WINDOW_MIN = 120; // a payment page this soon after a high-risk scam warning gets paused
 
 const AI_CUE_LABELS = {
   urgency: "Rushing you",
@@ -339,9 +341,106 @@ export async function checkCorrelation() {
     ],
     alertId: alert.id,
   });
+  const calls = await alertFamilyByPhone({
+    text: `KinGuard: ${db.person.name} may be in a scam right now. $${tx.amount.toFixed(2)} at ${tx.merchant} right after a ${String(event.scamTypeName || "scam").toLowerCase()} warning. Call ${db.person.name} now.`,
+    say: `This is KinGuard. ${db.person.name} may be in a scam right now. A payment of ${Math.round(tx.amount)} dollars was made right after a scam warning. Please call ${db.person.name} now.`,
+    alertId: alert.id,
+  });
   update((d) => {
     const a = d.alerts.find((x) => x.id === alert.id);
-    if (a) a.notified.push({ to: mail.to, status: mail.status, ts: mail.ts });
+    if (a) [mail, ...calls].forEach((m) => a.notified.push({ to: m.to, status: m.status, ts: m.ts, channel: m.channel || "email" }));
   });
   return alert;
+}
+
+/**
+ * "Pause before you pay": the extension found a payment page (gift cards, crypto, wire, Zelle).
+ * If a high-risk scam warning happened recently, pause the page and alert the family right away.
+ */
+export async function payAttempt({ url, title, kind, label }) {
+  const db = load();
+  const now = Date.now();
+  const name = db.person.name;
+  const familyName = db.family[0]?.name || "your family";
+  const scam = db.events.find(
+    (e) => e.type === "scam_check" && e.risk === "high" && now - Date.parse(e.ts) <= PAUSE_WINDOW_MIN * 60 * 1000
+  );
+  if (!scam) return { pause: false, familyName };
+
+  const minutesAgo = Math.max(1, Math.round((now - Date.parse(scam.ts)) / 60000));
+  const scamTypeName = scam.scamTypeName || "possible scam";
+  const what = label || "making a payment";
+  const base = { pause: true, minutesAgo, scamTypeName, label: what, familyName };
+  const mins = `${minutesAgo} minute${minutesAgo === 1 ? "" : "s"}`;
+
+  // Reloading the same payment page shouldn't alert the family again.
+  const recent = db.alerts.find(
+    (a) => a.kind === "pay_attempt" && a.eventIds.includes(scam.id) && a.url === url && now - Date.parse(a.ts) < 10 * 60 * 1000
+  );
+  if (recent) return { ...base, alertId: recent.id, notified: recent.notified.length > 0 };
+
+  const ts = new Date().toISOString();
+  const event = {
+    id: newId("ev"),
+    ts,
+    source: "web",
+    type: "payment_attempt",
+    title: title || url || "Payment page",
+    url: url || null,
+    risk: "high",
+    scamTypeName: `Paused: ${what}`,
+    cues: [],
+  };
+  const alert = {
+    id: newId("al"),
+    ts,
+    kind: "pay_attempt",
+    severity: "high",
+    title: `${name} may be about to pay a scammer`,
+    explanation: `${name} opened a page for ${what} ${mins} after KinGuard warned about a ${scamTypeName.toLowerCase()}. KinGuard paused the page. Call ${name} now, before any money moves.`,
+    eventIds: [scam.id, event.id],
+    txIds: [],
+    cues: scam.cues || [],
+    url: url || null,
+    kindOfPayment: kind || null,
+    decision: null,
+    status: "open",
+    notified: [],
+  };
+  update((d) => {
+    d.events.unshift(event);
+    d.alerts.unshift(alert);
+  });
+
+  const mail = await notifyFamily(db, {
+    heading: `⏸️ ${alert.title}`,
+    subject: `🚨 KinGuard: ${name} may be about to pay a scammer`,
+    explanation: alert.explanation,
+    cues: alert.cues,
+    details: [`Earlier warning: ${scamTypeName} (${scam.title})`, `Now: ${what}${url ? ` at ${url}` : ""}`, `Time between them: ${mins}`],
+    alertId: alert.id,
+  });
+  const calls = await alertFamilyByPhone({
+    text: `KinGuard: ${name} may be about to pay a scammer (${what}, ${mins} after a ${scamTypeName.toLowerCase()} warning). Call ${name} now.`,
+    say: `This is KinGuard. ${name} may be about to pay a scammer. ${name} is ${what}, ${mins} after a scam warning. Please call ${name} now.`,
+    alertId: alert.id,
+  });
+  update((d) => {
+    const a = d.alerts.find((x) => x.id === alert.id);
+    if (a) [mail, ...calls].forEach((m) => a.notified.push({ to: m.to, status: m.status, ts: m.ts, channel: m.channel || "email" }));
+  });
+
+  return { ...base, alertId: alert.id, notified: true };
+}
+
+/** What the person chose on the pause screen: "closed" the page or "continued" anyway. */
+export function recordPayDecision(alertId, decision) {
+  return update((db) => {
+    const a = db.alerts.find((x) => x.id === alertId && x.kind === "pay_attempt");
+    if (a) {
+      a.decision = decision;
+      a.decidedAt = new Date().toISOString();
+    }
+    return a || null;
+  });
 }

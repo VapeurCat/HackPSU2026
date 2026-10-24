@@ -304,6 +304,17 @@ mark {
   margin-top: 16px;
   align-items: center;
 }
+.decision {
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--safe-bg);
+  color: var(--safe);
+}
+.decision[data-decision="continued"] {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
 .notified {
   margin-top: 12px;
   font-size: 14px;

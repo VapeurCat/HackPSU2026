@@ -235,12 +235,31 @@ const KinGuardRules = (() => {
     return null;
   }
 
+  // Payment pages: where scam victims end up paying. Not a scam by themselves,
+  // but after a recent scam warning they trigger "Pause before you pay".
+  const PAY_KINDS = [
+    ["crypto", "buying crypto", /(\b(buy|purchase|send)\b.{0,30}\b(bitcoin|btc|crypto(currency)?|usdt|ethereum)\b|\b(bitcoin|crypto) (atm|kiosk)\b)/i],
+    ["gift_cards", "buying gift cards", /\bgift ?cards?\b/i],
+    ["payment_app", "sending money with a payment app", /\b(zelle|cash ?app|venmo|apple cash)\b/i],
+    ["wire", "sending a wire transfer", /\b(wire transfer|western union|moneygram|send a wire)\b/i],
+  ];
+  const PAY_ACTION = /\b(add to (cart|bag)|buy now|check ?out|purchase|place (your )?order|send money|send payment|pay now|confirm (payment|transfer)|transfer (money|funds)|recipient|payee)\b/i;
+
+  function paymentPage(text, url) {
+    const t = `${url || ""} ${String(text || "").slice(0, 20000)}`;
+    if (!PAY_ACTION.test(t)) return null;
+    for (const [kind, label, re] of PAY_KINDS) {
+      if (re.test(t)) return { kind, label };
+    }
+    return null;
+  }
+
   const RANK = { low: 0, medium: 1, high: 2 };
   function maxRisk(a, b) {
     return (RANK[a] ?? 0) >= (RANK[b] ?? 0) ? a : b;
   }
 
-  return { analyze, flagTransaction, maxRisk, RANK, TYPE_NAMES, ELDER_TEXT, CUES };
+  return { analyze, flagTransaction, paymentPage, maxRisk, RANK, TYPE_NAMES, ELDER_TEXT, CUES };
 })();
 
 if (typeof module !== "undefined" && module.exports) module.exports = KinGuardRules;

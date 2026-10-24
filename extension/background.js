@@ -27,6 +27,20 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     return true;
   }
 
+  if (msg.type === "PAY_CHECK") {
+    call("/api/pay-check", { url: msg.url, title: msg.title, kind: msg.kind, label: msg.label })
+      .then(reply)
+      .catch((e) => reply({ error: e.message }));
+    return true;
+  }
+
+  if (msg.type === "PAY_DECISION") {
+    call("/api/pay-check", { alertId: msg.alertId, decision: msg.decision })
+      .then(reply)
+      .catch(() => reply({ ok: false }));
+    return true;
+  }
+
   if (msg.type === "SPEAK") {
     call("/api/speak", { text: msg.text })
       .then(reply)
