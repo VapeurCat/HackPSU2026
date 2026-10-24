@@ -311,9 +311,43 @@ mark {
   background: var(--safe-bg);
   color: var(--safe);
 }
-.decision[data-decision="continued"] {
+.decision[data-decision="continued"],
+.decision[data-decision="trusted"] {
   background: var(--danger-bg);
   color: var(--danger);
+}
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 14px;
+  margin: 12px 0 0;
+  font-size: 14px;
+}
+.facts dt {
+  color: var(--muted);
+}
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.saw {
+  margin: 10px 0 0;
+  font-size: 14px;
+}
+.saw summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.saw blockquote {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border-left: 4px solid var(--line);
+  background: var(--paper);
+  white-space: pre-wrap;
+}
+.guide strong {
+  display: block;
+  margin-top: 8px;
 }
 .guide {
   margin: 12px 0 0;

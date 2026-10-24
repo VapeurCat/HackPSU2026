@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const POLL_MS = 3000;
 
@@ -108,6 +108,17 @@ function Guide({ guide, help }) {
     <details className="guide">
       <summary>About this scam: {guide.title}</summary>
       <p>{guide.what}</p>
+      {guide.ask?.length > 0 && (
+        <>
+          <strong>Questions to ask</strong>
+          <ul>
+            {guide.ask.map((q, i) => (
+              <li key={i}>{q}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      <strong>What they should do</strong>
       <ul>
         {guide.todo.map((t, i) => (
           <li key={i}>{t}</li>
@@ -166,10 +177,30 @@ function AlertCard({ alert, data, onStatus }) {
       </div>
       <p>{alert.explanation}</p>
 
-      {alert.kind === "pay_attempt" && alert.decision && (
+      {alert.decision && (
         <p className="decision" data-decision={alert.decision}>
-          {data.person.name} {alert.decision === "closed" ? "closed the page" : "chose to continue anyway"} at {timeOf(alert.decidedAt)}.
+          {data.person.name}{" "}
+          {{ closed: "closed the page", continued: "chose to continue anyway", trusted: "clicked “I trust this page” and stayed on it" }[alert.decision]}{" "}
+          at {timeOf(alert.decidedAt)}.
         </p>
+      )}
+
+      {alert.facts?.length > 0 && (
+        <dl className="facts">
+          {alert.facts.map(([k, v]) => (
+            <Fragment key={k}>
+              <dt>{k}</dt>
+              <dd>{v}</dd>
+            </Fragment>
+          ))}
+        </dl>
+      )}
+
+      {alert.excerpt && (
+        <details className="saw">
+          <summary>What {data.person.name} saw</summary>
+          <blockquote>{alert.excerpt}</blockquote>
+        </details>
       )}
 
       {alert.kind === "correlated" && (

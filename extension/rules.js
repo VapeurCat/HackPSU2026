@@ -292,6 +292,34 @@ const KinGuardRules = (() => {
     ],
   };
 
+  // Questions for the family member to ask, to find out how far things got.
+  const FAMILY_ASK = {
+    tech_support: ["Did you call the number on the screen?", "Did anyone connect to your computer or ask you to install a program?", "Did you pay anything, or share a card or bank number?"],
+    crypto_atm: ["Did you go to a Bitcoin machine or put cash into one?", "Who told you to pay this way, and are they still calling?"],
+    investment: ["How did you meet the person who suggested this investment?", "Have you already sent money, and how much?", "Have they asked for a fee or tax to withdraw?"],
+    family_emergency: ["Who called, and what did they say happened?", "Did you send money, gift cards or cash with a courier?"],
+    prize: ["Did you pay any fee or buy gift cards to collect the prize?", "Did you give out bank or Social Security numbers?"],
+    romance: ["How long have you known this person, and have you met in person or on video?", "Have they asked you for money, gift cards or crypto?"],
+    impersonation: ["Who did they say they were, and did they call you or did you call them?", "Did you move money, buy gift cards, or share account numbers or codes?"],
+    payment_app: ["Who asked you to send the money, and have you met them in person?", "Did you already send it?"],
+    platform_switch: ["Who is this person, and how did you meet them?", "Have they mentioned money or investing?"],
+    sextortion: ["Did you reply or pay anything?", "Is the password in the email one you still use anywhere?"],
+    gift_cards: ["Who asked you to buy the gift cards?", "Did you read the card numbers to anyone?"],
+    payment: ["Is someone on the phone telling you to make this payment?", "Who asked you to pay, and how do you know them?", "Did the payment already go through?"],
+    generic: ["What were you trying to do when the warning came up?", "Did you pay, call anyone, or share any personal information?"],
+  };
+  for (const [k, ask] of Object.entries(FAMILY_ASK)) GUIDES[k].ask = ask;
+
+  // Plain-language reasons for the hard rules, for the family.
+  const HARD_RULE_TEXT = {
+    crypto_atm: "Asked to pay at a crypto ATM",
+    secrecy_plus_money: "Asked for secrecy and money together",
+    payment_app_plus_pressure: "Pressure to pay with a payment app",
+    platform_switch_plus_money_or_pressure: "Moved to another app, plus money or pressure",
+    account_takeover_pattern: "Asked for computer access or a code under pressure",
+    blackmail_plus_payment: "Blackmail threat with a payment demand",
+  };
+
   // Match a scam type name (including the AI's free-text names) to a guide.
   function guideFor(name) {
     const n = String(name || "").toLowerCase();
@@ -451,7 +479,7 @@ const KinGuardRules = (() => {
     return (RANK[a] ?? 0) >= (RANK[b] ?? 0) ? a : b;
   }
 
-  return { analyze, flagTransaction, paymentPage, guideFor, maxRisk, RANK, TYPE_NAMES, ELDER_TEXT, CUES, GUIDES, HELP };
+  return { analyze, flagTransaction, paymentPage, guideFor, maxRisk, RANK, TYPE_NAMES, ELDER_TEXT, CUES, GUIDES, HELP, HARD_RULE_TEXT };
 })();
 
 if (typeof module !== "undefined" && module.exports) module.exports = KinGuardRules;

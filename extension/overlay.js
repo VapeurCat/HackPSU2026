@@ -110,6 +110,11 @@ const KinGuardUI = (() => {
     current = null;
   }
 
+  // Tell the family what the person chose (only once the backend has created an alert).
+  function decide(v, decision) {
+    if (v.alertId) chrome.runtime.sendMessage({ type: "DECISION", alertId: v.alertId, decision });
+  }
+
   function renderHigh(v, pending) {
     const guideWasOpen = root.querySelector("details.guide")?.open; // keep it open when the AI's answer arrives
     const signs = (v.cues || []).filter((c) => c.quote).slice(0, 5);
@@ -138,9 +143,15 @@ const KinGuardUI = (() => {
           </div>
         </div>
       </div>`;
-    root.querySelector('[data-act="close"]').onclick = () => chrome.runtime.sendMessage({ type: "CLOSE_TAB" });
+    root.querySelector('[data-act="close"]').onclick = () => {
+      decide(v, "closed");
+      chrome.runtime.sendMessage({ type: "CLOSE_TAB" });
+    };
     root.querySelector('[data-act="speak"]').onclick = () => speak(`Stop. This looks like a scam. ${v.explanationForElder}`);
-    root.querySelector('[data-act="trust"]').onclick = close;
+    root.querySelector('[data-act="trust"]').onclick = () => {
+      decide(v, "trusted");
+      close();
+    };
     if (guideWasOpen) root.querySelector("details.guide").open = true;
     else root.querySelector('[data-act="close"]').focus();
   }
@@ -186,14 +197,13 @@ const KinGuardUI = (() => {
           </div>
         </div>
       </div>`;
-    const decide = (decision) => v.alertId && chrome.runtime.sendMessage({ type: "PAY_DECISION", alertId: v.alertId, decision });
     root.querySelector('[data-act="close"]').onclick = () => {
-      decide("closed");
+      decide(v, "closed");
       chrome.runtime.sendMessage({ type: "CLOSE_TAB" });
     };
     root.querySelector('[data-act="speak"]').onclick = () => speak(`Wait. Before you pay. ${say}`);
     root.querySelector('[data-act="continue"]').onclick = () => {
-      decide("continued");
+      decide(v, "continued");
       close();
     };
     root.querySelector('[data-act="close"]').focus();

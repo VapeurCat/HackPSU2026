@@ -82,7 +82,7 @@ Return JSON only, in this shape:
   "cues": [{ "cue": "one of the cue names", "quote": "exact phrase" }],
   "pig_butchering_stage": 1 | 2 | 3 | 4 | null,
   "explanation_for_elder": "1 to 2 calm, simple sentences telling them what this is and what to do. No jargon.",
-  "explanation_for_family": "1 sentence for their adult child summarizing what happened"
+  "explanation_for_family": "2 to 3 sentences for their adult child: what this is, the specific details that make it look like a scam (who it pretends to be, what it asks for, any amounts, numbers or deadlines), and how confident you are"
 }
 
 <content>

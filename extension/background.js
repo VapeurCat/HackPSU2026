@@ -34,8 +34,8 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     return true;
   }
 
-  if (msg.type === "PAY_DECISION") {
-    call("/api/pay-check", { alertId: msg.alertId, decision: msg.decision })
+  if (msg.type === "DECISION") {
+    call("/api/decision", { alertId: msg.alertId, decision: msg.decision })
       .then(reply)
       .catch(() => reply({ ok: false }));
     return true;

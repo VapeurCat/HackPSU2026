@@ -73,10 +73,94 @@ function mergeVerdicts(local, ai) {
   };
 }
 
-async function notifyFamily(db, { heading, subject, explanation, cues, details, alertId }) {
+const SOURCE_NAMES = { web: "web page", gmail: "email", paste: "checked message", bank: "bank" };
+
+function siteOf(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
+function timeOf(ts) {
+  return new Date(ts).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+// The part of the page or email around the first warning sign, so the family sees what mattered.
+function excerptAround(text, cues) {
+  const t = String(text || "").replace(/\s+/g, " ").trim();
+  const quote = (cues || []).find((c) => c.quote && !c.fromAI)?.quote;
+  const at = quote ? t.indexOf(quote) : -1;
+  let start = Math.max(0, at - 150);
+  if (start > 0) start = t.indexOf(" ", start) + 1 || start; // begin on a whole word
+  let end = Math.min(t.length, start + 450);
+  if (end < t.length) end = t.lastIndexOf(" ", end) > start ? t.lastIndexOf(" ", end) : end;
+  return `${start > 0 ? "…" : ""}${t.slice(start, end)}${end < t.length ? "…" : ""}`;
+}
+
+// How sure KinGuard is, in plain words.
+function sureness(e) {
+  const level = { high: "High risk", medium: "Suspicious", low: "Looks OK" }[e.risk] || e.risk;
+  const how = e.aiUsed ? "confirmed by AI review" : "built-in rules only (AI review was unavailable)";
+  const rules = (e.hardRules || []).map((r) => KinGuardRules.HARD_RULE_TEXT[r]).filter(Boolean);
+  const n = (e.cues || []).length;
+  return `${level}, ${how}. ${n} warning sign${n === 1 ? "" : "s"}${rules.length ? `, including: ${rules.join("; ")}` : ""}.`;
+}
+
+// What, where, when and how sure, for the family email and dashboard.
+export function factsFor(e) {
+  if (!e) return [];
+  const facts = [];
+  if (e.scamTypeName) facts.push(["What", e.scamTypeName]);
+  if (e.source === "gmail") {
+    facts.push(["Email from", e.sender || "unknown sender"], ["Subject", e.title || "(none)"]);
+  } else if (e.source === "web") {
+    if (e.title && e.title !== e.url) facts.push(["Page title", e.title]);
+    if (e.url) facts.push(["Website", siteOf(e.url) || e.url], ["Full address", e.url]);
+  } else if (e.source === "bank") {
+    facts.push(["Payment", e.title]);
+  }
+  facts.push(["When", timeOf(e.ts)]);
+  if (e.type === "scam_check") facts.push(["How sure", sureness(e)]);
+  return facts;
+}
+
+function recentFor(db, skipIds) {
+  const now = Date.now();
+  return db.events
+    .filter((e) => !skipIds.includes(e.id) && now - Date.parse(e.ts) <= 2 * 3600e3)
+    .slice(0, 5)
+    .map((e) => `${timeOf(e.ts)}: ${e.scamTypeName || "Checked"} (${SOURCE_NAMES[e.source] || e.source}: ${e.source === "web" && e.url ? siteOf(e.url) : e.title})`);
+}
+
+const DECISION_TEXT = {
+  closed: "Closed the page",
+  continued: "Chose to continue anyway",
+  trusted: "Clicked “I trust this page” and stayed on it",
+};
+
+/** earlier: the event is an earlier warning (pay attempt, payment), so label its facts that way. */
+async function notifyFamily(db, { heading, subject, explanation, cues, details = [], alertId, event, earlier = false, extraFacts = [], skipIds = [], guideKey, askKey }) {
   const member = db.family[0];
   const to = process.env.FAMILY_EMAIL || member?.email;
-  const { html, text } = buildAlertEmail({ elderName: db.person.name, heading, explanation, cues, details });
+  const guide = KinGuardRules.GUIDES[guideKey] || null;
+  const ask = (KinGuardRules.GUIDES[askKey || guideKey] || KinGuardRules.GUIDES.generic).ask;
+  const fresh = load();
+  let facts = factsFor(event);
+  if (earlier) facts = facts.map(([k, v]) => [{ What: "Earlier warning", When: "Warned at" }[k] || k, v]);
+  // If the person already responded to an earlier warning about this event, say what they chose.
+  const answered = event && fresh.alerts.find((a) => a.id !== alertId && a.eventIds?.[0] === event.id && a.decision);
+  if (answered) facts.push([`${db.person.name}'s choice`, `${DECISION_TEXT[answered.decision]} (${timeOf(answered.decidedAt)})`]);
+  const context = {
+    facts: [...facts, ...extraFacts],
+    excerpt: event?.excerpt || "",
+    recent: recentFor(fresh, [event?.id, ...skipIds]),
+    ask,
+    guide,
+    help: KinGuardRules.HELP,
+  };
+  const { html, text } = buildAlertEmail({ elderName: db.person.name, heading, explanation, cues, details, context });
   return sendFamilyEmail({ to, subject, html, text, alertId });
 }
 
@@ -121,7 +205,8 @@ export async function analyzeContent(input, { forceAI = false, alwaysNotify = fa
       explanationForElder: verdict.explanationForElder,
       explanationForFamily: verdict.explanationForFamily,
       aiUsed: verdict.aiUsed,
-      excerpt: String(input.text || "").slice(0, 400),
+      hardRules: (verdict.hardRules || []).map((r) => r.rule),
+      excerpt: excerptAround(input.text, verdict.cues),
     };
     update((db) => {
       db.events.unshift(event);
@@ -157,18 +242,14 @@ export async function analyzeContent(input, { forceAI = false, alwaysNotify = fa
     const subject = asked
       ? `${elder} asked you to check an email: ${icon} ${verdict.risk === "low" ? "looks OK" : verdict.scamTypeName || "suspicious"}`
       : `${icon} KinGuard: ${verdict.scamTypeName || "possible scam"} on ${elder}'s computer`;
-    const details = [];
-    if (input.source === "gmail") details.push(`Email from: ${input.sender || "unknown"}`, `Subject: ${input.subject || "(none)"}`);
-    if (input.source === "web" && input.url) details.push(`Page: ${input.url}`);
-    details.push(`Risk: ${verdict.risk}`);
-
     const mail = await notifyFamily(db, {
       heading: asked ? `${elder} asked for a second opinion on an email` : `${verdict.scamTypeName || "Possible scam"} detected`,
       subject,
       explanation: verdict.explanationForFamily || verdict.explanationForElder || "KinGuard checked this email.",
       cues: verdict.cues,
-      details,
       alertId: alert?.id,
+      event,
+      guideKey: verdict.guideKey,
     });
     notified = true;
     if (alert) {
@@ -256,8 +337,10 @@ export async function recordTransaction(txInput) {
         subject: `⚠️ KinGuard: $${tx.amount.toFixed(2)} crypto purchase by ${db.person.name}`,
         explanation: alert.explanation,
         cues: [],
-        details: [`Merchant: ${tx.merchant}`, `Amount: $${tx.amount.toFixed(2)}`],
         alertId: alert.id,
+        event,
+        extraFacts: [["Merchant", tx.merchant], ["Amount", `$${tx.amount.toFixed(2)}`]],
+        guideKey: "payment",
       });
       update((d) => {
         const a = d.alerts.find((x) => x.id === alert.id);
@@ -343,15 +426,19 @@ export async function checkCorrelation() {
     subject: `🚨 KinGuard: ${db.person.name} may be in a scam right now`,
     explanation,
     cues: event.cues || [],
-    details: [
-      `Warning: ${event.scamTypeName || "possible scam"} (${event.source === "gmail" ? "email" : "web page"}: ${event.title})`,
-      `Payment: $${tx.amount.toFixed(2)} at ${tx.merchant}`,
-      `Time between them: ${minutes} minutes`,
-    ],
     alertId: alert.id,
+    event,
+    earlier: true,
+    extraFacts: [
+      ["Then the payment", `$${tx.amount.toFixed(2)} at ${tx.merchant} (${tx.flagReason}), ${timeOf(tx.ts)}`],
+      ["Time between them", `${minutes} minute${minutes === 1 ? "" : "s"}`],
+    ],
+    skipIds: db.events.filter((e) => e.txId === tx.id).map((e) => e.id),
+    guideKey: event.guideKey,
+    askKey: "payment",
   });
   const calls = await alertFamilyByPhone({
-    text: `KinGuard: ${db.person.name} may be in a scam right now. $${tx.amount.toFixed(2)} at ${tx.merchant} right after a ${String(event.scamTypeName || "scam").toLowerCase()} warning. Call ${db.person.name} now.`,
+    text: `KinGuard: ${db.person.name} may be in a scam right now. $${tx.amount.toFixed(2)} at ${tx.merchant} right after a ${String(event.scamTypeName || "scam").toLowerCase()} warning${event.url ? ` on ${siteOf(event.url)}` : ""}. Call ${db.person.name} now. Details: ${process.env.DASHBOARD_URL || "http://localhost:3000"}`,
     say: `This is KinGuard. ${db.person.name} may be in a scam right now. A payment of ${Math.round(tx.amount)} dollars was made right after a scam warning. Please call ${db.person.name} now.`,
     alertId: alert.id,
   });
@@ -427,11 +514,20 @@ export async function payAttempt({ url, title, kind, label }) {
     subject: `🚨 KinGuard: ${name} may be about to pay a scammer`,
     explanation: alert.explanation,
     cues: alert.cues,
-    details: [`Earlier warning: ${scamTypeName} (${scam.title})`, `Now: ${what}${url ? ` at ${url}` : ""}`, `Time between them: ${mins}`],
     alertId: alert.id,
+    event: scam,
+    earlier: true,
+    extraFacts: [
+      ["Now", `${what}${url ? ` on ${siteOf(url) || url}` : ""}${title ? ` ("${title}")` : ""}`],
+      ["Time between them", mins],
+      ["KinGuard's action", `Paused the page and asked ${name} to check with family first`],
+    ],
+    skipIds: [event.id],
+    guideKey: scam.guideKey,
+    askKey: "payment",
   });
   const calls = await alertFamilyByPhone({
-    text: `KinGuard: ${name} may be about to pay a scammer (${what}, ${mins} after a ${scamTypeName.toLowerCase()} warning). Call ${name} now.`,
+    text: `KinGuard: ${name} may be about to pay a scammer (${what}${url ? ` on ${siteOf(url)}` : ""}, ${mins} after a ${scamTypeName.toLowerCase()} warning). Call ${name} now. Details: ${process.env.DASHBOARD_URL || "http://localhost:3000"}`,
     say: `This is KinGuard. ${name} may be about to pay a scammer. ${name} is ${what}, ${mins} after a scam warning. Please call ${name} now.`,
     alertId: alert.id,
   });
@@ -443,10 +539,10 @@ export async function payAttempt({ url, title, kind, label }) {
   return { ...base, alertId: alert.id, notified: true };
 }
 
-/** What the person chose on the pause screen: "closed" the page or "continued" anyway. */
-export function recordPayDecision(alertId, decision) {
+/** What the person chose on a warning or pause screen: "closed" the page, "continued" anyway, or "trusted" it. */
+export function recordDecision(alertId, decision) {
   return update((db) => {
-    const a = db.alerts.find((x) => x.id === alertId && x.kind === "pay_attempt");
+    const a = db.alerts.find((x) => x.id === alertId);
     if (a) {
       a.decision = decision;
       a.decidedAt = new Date().toISOString();
