@@ -24,8 +24,7 @@ function seed() {
         name: family,
         relation: "daughter",
         email: process.env.FAMILY_EMAIL || "",
-        phone: process.env.FAMILY_PHONE || "",
-        alerts: { email: true, text: true, call: true },
+        alerts: { email: true },
         role: "owner",
       },
     ],
@@ -86,8 +85,7 @@ export function familyContact(db) {
     name: m.name || "your family",
     relation: m.relation || "",
     email: m.email || process.env.FAMILY_EMAIL || "",
-    phone: m.phone || process.env.FAMILY_PHONE || "",
-    alerts: { email: true, text: true, call: true, ...(m.alerts || {}) },
+    alerts: { email: true, ...(m.alerts || {}) },
   };
 }
 

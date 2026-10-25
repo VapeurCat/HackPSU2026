@@ -3,7 +3,6 @@ import KinGuardRules from "./rules.cjs";
 import { load, update, newId, familyContact } from "./db.js";
 import { analyzeWithGemini, explainCorrelation, geminiEnabled } from "./gemini.js";
 import { buildAlertEmail, sendFamilyEmail } from "./email.js";
-import { alertFamilyByPhone } from "./phone.js";
 
 const { analyze, flagTransaction, maxRisk, RANK } = KinGuardRules;
 const CORRELATION_WINDOW_MIN = 120;
@@ -97,12 +96,6 @@ function mergeVerdicts(local, ai) {
     guideKey: risk === "low" ? null : KinGuardRules.guideFor(aiType) || local.guideKey || "generic",
     aiUsed: true,
   };
-}
-
-// The mobile number and which phone alerts are on, from Settings.
-function phoneSettings(db) {
-  const c = familyContact(db);
-  return { to: c.phone, sms: c.alerts.text, call: c.alerts.call };
 }
 
 const SOURCE_NAMES = { web: "web page", gmail: "email", paste: "checked message", bank: "bank" };
@@ -472,15 +465,9 @@ export async function checkCorrelation() {
     guideKey: event.guideKey,
     askKey: "payment",
   });
-  const calls = await alertFamilyByPhone({
-    ...phoneSettings(db),
-    text: `KinGuard: ${db.person.name} may be in a scam right now. $${tx.amount.toFixed(2)} at ${tx.merchant} right after a ${String(event.scamTypeName || "scam").toLowerCase()} warning${event.url ? ` on ${siteOf(event.url)}` : ""}. Call ${db.person.name} now. Details: ${process.env.DASHBOARD_URL || "http://localhost:3000"}`,
-    say: `This is KinGuard. ${db.person.name} may be in a scam right now. A payment of ${Math.round(tx.amount)} dollars was made right after a scam warning. Please call ${db.person.name} now.`,
-    alertId: alert.id,
-  });
   update((d) => {
     const a = d.alerts.find((x) => x.id === alert.id);
-    if (a) [mail, ...calls].forEach((m) => a.notified.push({ to: m.to, status: m.status, ts: m.ts, channel: m.channel || "email" }));
+    if (a) a.notified.push({ to: mail.to, status: mail.status, ts: mail.ts, channel: "email" });
   });
   return alert;
 }
@@ -562,15 +549,9 @@ export async function payAttempt({ url, title, kind, label }) {
     guideKey: scam.guideKey,
     askKey: "payment",
   });
-  const calls = await alertFamilyByPhone({
-    ...phoneSettings(db),
-    text: `KinGuard: ${name} may be about to pay a scammer (${what}${url ? ` on ${siteOf(url)}` : ""}, ${mins} after a ${scamTypeName.toLowerCase()} warning). Call ${name} now. Details: ${process.env.DASHBOARD_URL || "http://localhost:3000"}`,
-    say: `This is KinGuard. ${name} may be about to pay a scammer. ${name} is ${what}, ${mins} after a scam warning. Please call ${name} now.`,
-    alertId: alert.id,
-  });
   update((d) => {
     const a = d.alerts.find((x) => x.id === alert.id);
-    if (a) [mail, ...calls].forEach((m) => a.notified.push({ to: m.to, status: m.status, ts: m.ts, channel: m.channel || "email" }));
+    if (a) a.notified.push({ to: mail.to, status: mail.status, ts: mail.ts, channel: "email" });
   });
 
   return { ...base, alertId: alert.id, notified: true };

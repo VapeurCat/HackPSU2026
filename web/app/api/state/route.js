@@ -1,7 +1,6 @@
 // Everything the dashboard shows. The dashboard polls this every 3 seconds.
 import { load, familyContact } from "@/lib/db";
 import { geminiEnabled } from "@/lib/gemini";
-import { phoneEnabled, twilioReady } from "@/lib/phone";
 import KinGuardRules from "@/lib/rules.cjs";
 import { factsFor } from "@/lib/pipeline";
 
@@ -27,9 +26,7 @@ export async function GET() {
       gemini: geminiEnabled(),
       email: Boolean(process.env.RESEND_API_KEY && contact.email),
       emailKey: Boolean(process.env.RESEND_API_KEY),
-      phoneKeys: twilioReady(),
       voice: Boolean(process.env.ELEVENLABS_API_KEY),
-      phone: phoneEnabled(contact.phone),
     },
     guides: KinGuardRules.GUIDES,
     help: KinGuardRules.HELP,

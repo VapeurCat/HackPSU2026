@@ -1,7 +1,6 @@
-// "Send a test alert": tries every alert type that's turned on, and reports exactly what happened.
+// "Send a test alert": sends a test email and reports exactly what happened.
 import { load, familyContact } from "@/lib/db";
 import { sendFamilyEmail } from "@/lib/email";
-import { alertFamilyByPhone } from "@/lib/phone";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,17 +22,6 @@ export async function POST() {
     results.push({ channel: "email", to: mail.to, status: mail.status });
   }
 
-  if (c.alerts.text || c.alerts.call) {
-    const sent = await alertFamilyByPhone({
-      text: `KinGuard test: this is how you'll be texted if ${name} may be in a scam. No action needed.`,
-      say: `This is a test call from KinGuard. This is how you'll be called if ${name} may be in a scam. No action is needed.`,
-      to: c.phone,
-      sms: c.alerts.text,
-      call: c.alerts.call,
-    });
-    sent.forEach((m) => results.push({ channel: m.channel === "sms" ? "text" : "phone call", to: m.to, status: m.status }));
-  }
-
-  if (!results.length) results.push({ channel: "none", to: "", status: "All alert types are turned off in Settings." });
+  if (!results.length) results.push({ channel: "none", to: "", status: "Email alerts are turned off in Settings." });
   return Response.json({ results });
 }

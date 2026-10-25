@@ -275,7 +275,7 @@ function AlertCard({ alert, data, onStatus, startOpen = false }) {
       {alert.notified?.length > 0 && (
         <div className="notified">
           {data.family[0]?.name || "Family"} alerted at {timeOf(alert.notified[0].ts)} by{" "}
-          {[...new Set(alert.notified.map((n) => ({ sms: "text", call: "phone call" })[n.channel] || "email"))].join(", ")} ({alert.notified[0].status})
+          email ({alert.notified[0].status})
         </div>
       )}
       </div>
@@ -388,12 +388,30 @@ function MoneyWatch({ data }) {
   );
 }
 
+// A short description of KinGuard for both the protected person and their trusted contact.
+function About({ data }) {
+  const name = data.person.name;
+  const family = data.family[0]?.name || "your trusted contact";
+  return (
+    <section aria-labelledby="about-h">
+      <h2 id="about-h">What KinGuard does</h2>
+      <p className="about">
+        KinGuard looks out for scams on {name}'s computer and keeps {name} and {family} on the same page. It checks websites in real
+        time as they open, checks every email opened in Gmail, and warns about lookalike web addresses (typosquatting) and emails
+        pretending to be well-known companies. Right after a scam warning, it pauses gift card, crypto and money transfer pages so
+        there's time to check first. Every warning explains the scam in plain language, with links to official sources, and can be read
+        aloud. When something looks like a scam, KinGuard emails {family}, and you both see the same alerts and timeline here.
+      </p>
+    </section>
+  );
+}
+
 function Outbox({ data }) {
   return (
     <section aria-labelledby="out-h">
       <h2 id="out-h">Alerts sent to {data.family[0]?.name || "family"}</h2>
       <p className="section-note">
-        {data.config.email || data.config.phone ? "Emails, texts and calls KinGuard sent." : "Alerts are saved here while email and phone sending are off."}
+        {data.config.email ? "Emails KinGuard sent." : "Alerts are saved here while email sending is off."}
       </p>
       <div className="panel">
         {data.outbox.length === 0 && <div className="tl-meta">No alerts sent yet.</div>}
@@ -426,8 +444,7 @@ function SettingsMenu({ data, refresh }) {
       name: c.name || "",
       relation: c.relation || "",
       email: c.email || "",
-      phone: c.phone || "",
-      alerts: { email: true, text: true, call: true, ...(c.alerts || {}) },
+      alerts: { email: true, ...(c.alerts || {}) },
     });
     setErrors({});
     setSaved(false);
@@ -459,7 +476,7 @@ function SettingsMenu({ data, refresh }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         personName: form.personName,
-        contact: { name: form.name, relation: form.relation, email: form.email, phone: form.phone, alerts: form.alerts },
+        contact: { name: form.name, relation: form.relation, email: form.email, alerts: form.alerts },
       }),
     });
     const out = await res.json();
@@ -469,7 +486,6 @@ function SettingsMenu({ data, refresh }) {
       return false;
     }
     setErrors({});
-    setForm((f) => ({ ...f, phone: out.contact.phone }));
     setSaved(true);
     await refresh();
     return true;
@@ -530,30 +546,15 @@ function SettingsMenu({ data, refresh }) {
                 {field("relation", "Relationship", { placeholder: "daughter, son, friend…", autoComplete: "off" })}
               </div>
               {field("email", "Email", { type: "email", placeholder: "name@example.com", autoComplete: "off" })}
-              {field("phone", "Mobile phone", { type: "tel", placeholder: "(814) 555-0123", autoComplete: "off" })}
             </fieldset>
 
             <fieldset>
-              <legend>How to alert them</legend>
+              <legend>Email alerts</legend>
               <label className="set-check">
                 <input type="checkbox" checked={form.alerts.email} onChange={(e) => setAlert("email", e.target.checked)} />
                 <span>
-                  <strong>Email</strong> for every likely scam
+                  <strong>Email them</strong> whenever KinGuard spots a likely scam
                   <small>{data.config.emailKey ? "Email sending is set up." : "Demo mode: emails are saved on the dashboard until a Resend key is added."}</small>
-                </span>
-              </label>
-              <label className="set-check">
-                <input type="checkbox" checked={form.alerts.text} onChange={(e) => setAlert("text", e.target.checked)} />
-                <span>
-                  <strong>Text message</strong> for the most urgent alerts
-                  <small>{data.config.phoneKeys ? "Texts and calls are set up." : "Demo mode: texts are saved on the dashboard until Twilio keys are added."}</small>
-                </span>
-              </label>
-              <label className="set-check">
-                <input type="checkbox" checked={form.alerts.call} onChange={(e) => setAlert("call", e.target.checked)} />
-                <span>
-                  <strong>Phone call</strong> for the most urgent alerts
-                  <small>The most urgent alerts: about to pay, or paid, right after a scam warning.</small>
                 </span>
               </label>
             </fieldset>
@@ -633,7 +634,6 @@ function DevMenu({ data, refresh }) {
           <ul className="dev-status">
             <li data-on={data.config.gemini}>{data.config.gemini ? "Gemini on" : "Rules only (add a Gemini key)"}</li>
             <li data-on={data.config.email}>{data.config.email ? "Email on" : "Email in demo mode (add a Resend key)"}</li>
-            <li data-on={data.config.phone}>{data.config.phone ? "Texts and calls on" : "Texts and calls in demo mode (add Twilio keys)"}</li>
             <li data-on={data.config.voice}>{data.config.voice ? "ElevenLabs voice on" : "Browser voice (add an ElevenLabs key)"}</li>
           </ul>
 
@@ -705,6 +705,7 @@ export default function Dashboard() {
         <div className="col">
           <MoneyWatch data={data} />
           <Outbox data={data} />
+          <About data={data} />
         </div>
       </main>
     </>
