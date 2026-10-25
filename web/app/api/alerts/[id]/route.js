@@ -1,4 +1,4 @@
-// Family marks an alert as safe or as a confirmed scam.
+// Mark an alert as safe or as a confirmed scam, or delete it.
 import { update } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -22,4 +22,16 @@ export async function PATCH(req, { params }) {
   });
   if (!alert) return Response.json({ error: "Alert not found" }, { status: 404 });
   return Response.json(alert);
+}
+
+// Delete an alert from the dashboard (the timeline entry it came from stays).
+export async function DELETE(req, { params }) {
+  const { id } = await params;
+  const found = update((db) => {
+    const before = db.alerts.length;
+    db.alerts = db.alerts.filter((a) => a.id !== id);
+    return db.alerts.length < before;
+  });
+  if (!found) return Response.json({ error: "Alert not found" }, { status: 404 });
+  return Response.json({ ok: true });
 }

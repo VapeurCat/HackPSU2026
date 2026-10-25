@@ -26,6 +26,24 @@ async function post(url, body, method = "POST") {
   return res.json();
 }
 
+// × button that deletes something after an "Are you sure?" check.
+function DeleteButton({ label, onDelete }) {
+  return (
+    <button
+      type="button"
+      className="delete-x"
+      aria-label={`Delete ${label}`}
+      title="Delete"
+      onClick={(e) => {
+        e.stopPropagation(); // don't open a collapsed card
+        if (confirm("Are you sure you want to delete this?")) onDelete();
+      }}
+    >
+      ×
+    </button>
+  );
+}
+
 function Shield() {
   return (
     <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
@@ -147,7 +165,7 @@ function Guide({ guide, help }) {
   );
 }
 
-function AlertCard({ alert, data, onStatus, startOpen = false }) {
+function AlertCard({ alert, data, onStatus, onDelete, startOpen = false }) {
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState(startOpen);
   const bodyId = `alert-body-${alert.id}`;
@@ -176,13 +194,16 @@ function AlertCard({ alert, data, onStatus, startOpen = false }) {
       data-expanded={expanded}
       onClick={expanded ? undefined : () => setExpanded(true)}
     >
-      <h3 className="alert-heading">
-        <button type="button" className="alert-toggle" aria-expanded={expanded} aria-controls={bodyId} onClick={() => setExpanded((x) => !x)}>
-          <span className="alert-title">{alert.title}</span>
-          <span className="when">{timeOf(alert.ts)}</span>
-          <span className="chevron" aria-hidden="true">▾</span>
-        </button>
-      </h3>
+      <div className="alert-top">
+        <h3 className="alert-heading">
+          <button type="button" className="alert-toggle" aria-expanded={expanded} aria-controls={bodyId} onClick={() => setExpanded((x) => !x)}>
+            <span className="alert-title">{alert.title}</span>
+            <span className="when">{timeOf(alert.ts)}</span>
+            <span className="chevron" aria-hidden="true">▾</span>
+          </button>
+        </h3>
+        <DeleteButton label={`alert: ${alert.title}`} onDelete={() => onDelete(alert.id)} />
+      </div>
       {!expanded && (
         <p className="alert-summary">
           {statusText && <span className="status-pill">{statusText}</span>}
@@ -257,20 +278,28 @@ function AlertCard({ alert, data, onStatus, startOpen = false }) {
   );
 }
 
-function Alerts({ data, onStatus }) {
+const ALERTS_SHOWN = 4;
+
+function Alerts({ data, onStatus, onDelete }) {
+  const [showAll, setShowAll] = useState(false);
   const open = data.alerts.filter((a) => a.status === "open");
-  const closed = data.alerts.filter((a) => a.status !== "open").slice(0, 3);
+  const closed = data.alerts.filter((a) => a.status !== "open");
+  const all = [...open, ...closed];
+  const shown = showAll ? all : all.slice(0, ALERTS_SHOWN);
+  const hidden = all.length - shown.length;
   return (
     <section aria-labelledby="alerts-h">
       <h2 id="alerts-h">Alerts</h2>
-      <p className="section-note">High-risk moments that need a family member's attention.</p>
+      <p className="section-note">High-risk moments worth a closer look.</p>
       {open.length === 0 && <div className="empty">No open alerts. You'll see one here, and get an email, the moment something looks like a scam.</div>}
-      {open.map((a, i) => (
-        <AlertCard key={a.id} alert={a} data={data} onStatus={onStatus} startOpen={i === 0} />
+      {shown.map((a) => (
+        <AlertCard key={a.id} alert={a} data={data} onStatus={onStatus} onDelete={onDelete} startOpen={a.id === open[0]?.id} />
       ))}
-      {closed.map((a) => (
-        <AlertCard key={a.id} alert={a} data={data} onStatus={onStatus} />
-      ))}
+      {(hidden > 0 || showAll) && all.length > ALERTS_SHOWN && (
+        <button type="button" className="btn more" onClick={() => setShowAll((x) => !x)}>
+          {showAll ? "Show fewer" : `Show ${hidden} more alert${hidden === 1 ? "" : "s"}`}
+        </button>
+      )}
     </section>
   );
 }
@@ -282,7 +311,7 @@ const FILTERS = [
   ["email", "Email"],
 ];
 
-function Timeline({ data }) {
+function Timeline({ data, onDeleteEvent }) {
   const [filter, setFilter] = useState("all");
 
   const items = useMemo(() => {
@@ -310,6 +339,7 @@ function Timeline({ data }) {
         <ol className="timeline">
           {items.map((i) => (
             <li key={i.id} data-risk={i.risk}>
+              <DeleteButton label={`timeline entry: ${i.title}`} onDelete={() => onDeleteEvent(i.id)} />
               <div className="tl-title">
                 {i.title}
                 {i.risk !== "low" && (
@@ -332,19 +362,15 @@ function Timeline({ data }) {
   );
 }
 
-// A short description of KinGuard for both the protected person and their trusted contact.
-function About({ data }) {
-  const name = data.person.name;
-  const family = data.family[0]?.name || "your trusted contact";
+// A short, neutral description of KinGuard for anyone using the dashboard.
+function About() {
   return (
-    <section aria-labelledby="about-h">
+    <section className="about-card" aria-labelledby="about-h">
       <h2 id="about-h">What KinGuard does</h2>
       <p className="about">
-        KinGuard looks out for scams on {name}'s computer and keeps {name} and {family} on the same page. It checks websites in real
-        time as they open, checks every email opened in Gmail, and warns about lookalike web addresses (typosquatting) and emails
-        pretending to be well-known companies. Right after a scam warning, it pauses gift card, crypto and money transfer pages so
-        there's time to check first. Every warning explains the scam in plain language, with links to official sources, and can be read
-        aloud. When something looks like a scam, KinGuard emails {family}, and you both see the same alerts and timeline here.
+        KinGuard watches for scams while you browse. It checks websites and Gmail messages as they open, flags lookalike web addresses
+        and fake company senders, and pauses payment pages right after a scam warning. Each warning explains the scam in plain
+        language, and the trusted contact gets an email when something looks serious.
       </p>
     </section>
   );
@@ -591,7 +617,7 @@ function DevMenu({ data, refresh }) {
     setBusy(false);
   };
   const reset = () => {
-    if (!confirm("Clear all alerts, timeline events and emails?")) return;
+    if (!confirm("Delete all past alerts, timeline entries and sent emails? Settings and trusted sites are kept.")) return;
     run(() => post("/api/reset"));
   };
 
@@ -625,7 +651,7 @@ function DevMenu({ data, refresh }) {
           </ul>
 
           <button className="btn btn-danger" onClick={reset} disabled={busy}>
-            Reset demo
+            Delete cache
           </button>
         </div>
       )}
@@ -657,6 +683,27 @@ export default function Dashboard() {
     await post(`/api/alerts/${id}`, { status }, "PATCH");
     await refresh();
   };
+  const deleteAlert = async (id) => {
+    await post(`/api/alerts/${id}`, {}, "DELETE");
+    await refresh();
+  };
+  const deleteEvent = async (id) => {
+    await post(`/api/events/${id}`, {}, "DELETE");
+    await refresh();
+  };
+
+  // Two views: Alerts (what needs a look) and History (timeline and sent emails). The address keeps the choice.
+  const [view, setView] = useState("alerts");
+  useEffect(() => {
+    const fromHash = () => setView(location.hash === "#history" ? "history" : "alerts");
+    fromHash();
+    window.addEventListener("hashchange", fromHash);
+    return () => window.removeEventListener("hashchange", fromHash);
+  }, []);
+  const show = (v) => {
+    setView(v);
+    history.replaceState(null, "", v === "history" ? "#history" : location.pathname);
+  };
 
   if (!data) {
     return <main><p>{error || "Loading…"}</p></main>;
@@ -665,16 +712,29 @@ export default function Dashboard() {
   return (
     <>
       <StatusBand data={data} refresh={refresh} />
-      <main>
-        <div className="col">
-          <Alerts data={data} onStatus={setStatus} />
-          <Timeline data={data} />
-        </div>
-        <div className="col">
-          <Outbox data={data} />
-          <About data={data} />
-        </div>
-      </main>
+      <nav className="tabs" aria-label="Dashboard views">
+        <button type="button" aria-current={view === "alerts" ? "page" : undefined} onClick={() => show("alerts")}>
+          Alerts{data.alerts.some((a) => a.status === "open") ? ` (${data.alerts.filter((a) => a.status === "open").length})` : ""}
+        </button>
+        <button type="button" aria-current={view === "history" ? "page" : undefined} onClick={() => show("history")}>
+          History
+        </button>
+      </nav>
+      {view === "alerts" ? (
+        <main className="single">
+          <About />
+          <Alerts data={data} onStatus={setStatus} onDelete={deleteAlert} />
+        </main>
+      ) : (
+        <main>
+          <div className="col">
+            <Timeline data={data} onDeleteEvent={deleteEvent} />
+          </div>
+          <div className="col">
+            <Outbox data={data} />
+          </div>
+        </main>
+      )}
     </>
   );
 }

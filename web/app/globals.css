@@ -812,3 +812,82 @@ mark {
   font-size: 13px;
   color: var(--muted);
 }
+
+/* ---------- Tabs, delete buttons, Show more ---------- */
+.tabs {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 18px 24px 0;
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.tabs button {
+  font: inherit;
+  font-weight: 700;
+  font-size: 16px;
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+.tabs button[aria-current="page"] {
+  background: var(--paper);
+  border-color: var(--line);
+  color: var(--ink);
+}
+main.single {
+  grid-template-columns: minmax(0, 860px);
+  justify-content: center;
+}
+.about-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+}
+.about-card h2 {
+  font-size: 18px;
+  margin: 0 0 6px;
+}
+.alert-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.alert-top .alert-heading {
+  flex: 1;
+  min-width: 0;
+}
+.delete-x {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.delete-x:hover {
+  border-color: var(--line);
+  background: var(--paper);
+  color: var(--danger);
+}
+.timeline li .delete-x {
+  position: absolute;
+  right: 0;
+  top: -4px;
+}
+.timeline li .tl-title {
+  padding-right: 36px;
+}
+.btn.more {
+  width: 100%;
+}

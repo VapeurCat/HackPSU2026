@@ -66,7 +66,7 @@ Without any keys, everything works on the built-in rules, and emails are recorde
 
 ## The 3-minute demo
 
-Before each run, open the **DEV** menu on the dashboard and click **Reset demo**.
+Before each run, open the **DEV** menu on the dashboard and click **Delete cache** (clears past alerts, timeline and sent emails; keeps Settings and trusted sites).
 
 1. **Hook:** "Elder fraud is rarely one bad click. It's a chain."
 2. **The popup:** on "Frank's" window, open `/demo/tech-support.html`. KinGuard covers it with a calm explanation and the exact phrases that are red flags. Click **Read this to me**.
