@@ -38,6 +38,7 @@ const SCAMS = [
   ["high", "", "My love, I've fallen for you, but I urgently need money to visit you. Please send it with a gift card, my dear."],
   ["high", "", "A deceased relative left you an inheritance of $4.2 million. Pay the legal fees to claim it."],
   ["high", "", "Congratulations! You've won a prize of $50,000. Pay the processing fee and shipping to claim your prize."],
+  ["high", "Connor DelRosso <someone@gmail.com>", "CONGRATULATIONS, YOU HAVE WON!!! Dear Lucky Winner, your email address has been selected as one of our LUCKY WINNERS. You have won the sum of $850,000.00 USD and are required to contact our payment officer immediately. To claim your prize, visit our official claim portal. This prize is valid for limited time only. We await your urgent response."],
   ["medium", "", "Help hurricane victims now. Donate today using this urgent payment link and a sponsor will double your donation."],
   ["high", "", "Grandpa it's me, I'm in jail after a car accident. I need money immediately for bail. Please don't tell anyone."],
   // Files, links and attachments
@@ -81,6 +82,8 @@ const SAFE = [
   ["", "Recipe: Grandma's apple pie. Ingredients: 6 apples, 1 cup sugar, cinnamon, butter, pie crust. Bake at 375 for 50 minutes."],
   ["", "Hometown Market gift cards. Pick a design, choose an amount, and pick it up at the front counter. Buy now."],
   ["", "State College Area School District: the school board meeting is Monday at 7 pm. The public is welcome."],
+  ["Hometown Market <deals@hometownmarket.example>", "Thanks for entering our holiday sweepstakes! Winners will be announced on December 1. Good luck!"],
+  ["", "Congratulations to our science fair winners! Emma took first prize for her project on bees."],
   ["", "Your Social Security statement is available online at ssa.gov. Sign in to my Social Security to view your earnings record."],
 ];
 

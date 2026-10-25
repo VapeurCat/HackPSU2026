@@ -11,7 +11,7 @@ const KinGuardRules = (() => {
     urgency: {
       w: 2,
       label: "Rushing you",
-      re: /\b(urgent(ly)?|immediately|right away|act now|within \d+\s*(minutes?|hours?)|today only|expires? (today|tonight)|final (notice|warning)|last chance|unless you (sign|log|verify|confirm|act|respond|pay|update|call))\b/i,
+      re: /\b(urgent(ly)?|immediately|right away|act now|within \d+\s*(minutes?|hours?)|today only|expires? (today|tonight)|final (notice|warning)|last chance|unless you (sign|log|verify|confirm|act|respond|pay|update|call)|(for a )?limited time( only)?|respond (quickly|promptly|asap)|urgent (response|reply|attention))\b/i,
     },
     authority: {
       w: 2,
@@ -56,7 +56,7 @@ const KinGuardRules = (() => {
     tooGood: {
       w: 1,
       label: "Too good to be true",
-      re: /\b(you('ve| have)? won|prize|inheritance|guaranteed (returns?|profits?)|risk[- ]free|double your money)\b/i,
+      re: /\b(you('ve| have)? won|prize|inheritance|guaranteed (returns?|profits?)|risk[- ]free|double your money|lucky winners?|won the sum of|(selected|chosen) as (one of )?(our )?(lucky )?winners?|claim your (prize|winnings|reward|funds))\b/i,
     },
     bonding: {
       w: 1,
@@ -545,6 +545,7 @@ const KinGuardRules = (() => {
     lookalike_site: "Lookalike website asking for a password, code or card",
     guaranteed_returns: "Guaranteed returns on crypto or trading",
     romance_money: "Affection plus an urgent money request",
+    prize_claim: "A surprise prize with pressure to claim it quickly",
   };
 
   // Match a scam type name (including the AI's free-text names) to a guide.
@@ -719,6 +720,7 @@ const KinGuardRules = (() => {
       hardRules.push({ rule: "fee_for_money" });
     }
     if (FAKE_CHECK.test(t)) hardRules.push({ rule: "fake_check" });
+    if (PRIZE.test(t) && has(cues, ["urgency"]) && /\b(claim|contact|visit|portal|payment officer|agent|click)\b/i.test(t)) hardRules.push({ rule: "prize_claim" });
     if (/\b(guaranteed (returns?|profits?)|double your money)\b/i.test(t) && /\b(crypto|bitcoin|trading|forex)\b/i.test(t)) hardRules.push({ rule: "guaranteed_returns" });
     if (has(cues, ["paymentRedirect"]) && has(cues, ["urgency", "secrecy", "bossRequest"])) hardRules.push({ rule: "payment_redirect_pressure" });
     if (has(cues, ["bossRequest"]) && has(cues, ["untraceable"])) hardRules.push({ rule: "boss_gift_cards" });

@@ -13,9 +13,11 @@
   const STATUS = {
     checking: ["🛡️ KinGuard is checking this email…", "#55706a"],
     closer: ["🛡️ KinGuard is taking a closer look…", "#55706a"],
-    clean: ["✅ KinGuard checked this email. No warning signs found.", "#23784f"],
-    cleared: ["✅ KinGuard double-checked this email. It looks OK.", "#23784f"],
+    clean: ["✅ Looks clean: KinGuard found no warning signs.", "#23784f"],
+    cleared: ["✅ Looks clean: KinGuard double-checked this email with AI.", "#23784f"],
   };
+  // No checker catches everything, so a clean result always says so.
+  const NOT_PERFECT = "No check is 100% reliable. Be careful with links, attachments and requests for money or personal details.";
 
   function esc(s) {
     return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -71,6 +73,9 @@
       status.textContent = STATUS[key][0];
       status.style.color = STATUS[key][1];
       status.style.display = "";
+      status.title = key === "clean" || key === "cleared" ? NOT_PERFECT : "";
+      result.innerHTML =
+        key === "clean" || key === "cleared" ? `<div style="font-size:13px;color:#55706a;margin-top:-4px">${NOT_PERFECT}</div>` : "";
     };
     const warn = (v) => {
       status.style.display = "none"; // the verdict below says it all
