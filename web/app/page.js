@@ -96,23 +96,45 @@ function Shield() {
   );
 }
 
-// Header art: thin wave lines and a small lighthouse, drawn in the band's own color.
+// A gentle wave line at height y, 2400 units wide (twice the header), repeating every 300.
+function wavePath(y, amp) {
+  let d = `M0 ${y} Q 75 ${y - amp} 150 ${y}`;
+  for (let x = 300; x <= 2400; x += 150) d += ` T ${x} ${y}`;
+  return d;
+}
+
+// Header art: slowly drifting wave lines, a low sun, two gulls and a lighthouse, drawn in the band's own color.
 function Sea() {
   return (
     <>
-      <svg className="band-sea" viewBox="0 0 1200 300" preserveAspectRatio="none" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round">
-        <path d="M0 236 C 150 222, 300 250, 450 236 S 750 222, 900 236 S 1100 250, 1200 238" strokeWidth="1.2" opacity="0.7" />
-        <path d="M0 256 C 170 242, 320 270, 490 256 S 790 242, 940 256 S 1120 268, 1200 258" strokeWidth="1.2" opacity="0.55" />
-        <path d="M0 276 C 130 264, 280 290, 430 276 S 730 262, 880 276 S 1090 288, 1200 278" strokeWidth="1.2" opacity="0.4" />
+      {/* Each wave repeats every 300 units, so sliding it 1200 to the left loops without a seam. */}
+      <svg className="band-sea" viewBox="0 0 1200 96" preserveAspectRatio="none" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round">
+        <g className="wave wave-1">
+          <path d={wavePath(30, 10)} strokeWidth="1.3" opacity="0.75" vectorEffect="non-scaling-stroke" />
+        </g>
+        <g className="wave wave-2">
+          <path d={wavePath(54, 8)} strokeWidth="1.2" opacity="0.55" vectorEffect="non-scaling-stroke" />
+        </g>
+        <g className="wave wave-3">
+          <path d={wavePath(76, 6)} strokeWidth="1.1" opacity="0.38" vectorEffect="non-scaling-stroke" />
+        </g>
       </svg>
-      <svg className="band-light" width="120" height="150" viewBox="0 0 120 150" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
-        <path d="M86 140 L 92 50 L 108 50 L 114 140 Z" />
-        <path d="M90 50 L 110 50 L 107 34 L 93 34 Z" />
-        <path d="M95 34 L 100 24 L 105 34" />
-        <path d="M89 98 L 111 98" />
-        <path d="M78 140 L 120 140" />
-        <path d="M93 40 L 4 14" opacity="0.6" />
-        <path d="M93 44 L 4 70" opacity="0.6" />
+      <svg className="band-light" width="230" height="160" viewBox="0 0 230 160" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+        <circle className="band-sun" cx="78" cy="78" r="30" strokeWidth="1.2" />
+        <path d="M30 34 q 6 -6 12 0 q 6 -6 12 0" strokeWidth="1.2" opacity="0.7" />
+        <path d="M62 22 q 4 -4 8 0 q 4 -4 8 0" strokeWidth="1.1" opacity="0.55" />
+        <g className="band-beam" strokeWidth="1.2">
+          <path d="M184 44 L 70 14" opacity="0.55" />
+          <path d="M184 48 L 70 82" opacity="0.55" />
+        </g>
+        <g strokeWidth="1.5">
+          <path d="M174 150 L 180 56 L 196 56 L 202 150 Z" />
+          <path d="M178 56 L 198 56 L 195 40 L 181 40 Z" />
+          <path d="M183 40 L 188 30 L 193 40" />
+          <path d="M177 88 L 199 88" />
+          <path d="M175.5 118 L 200.5 118" />
+          <path d="M162 150 L 214 150" />
+        </g>
       </svg>
     </>
   );
