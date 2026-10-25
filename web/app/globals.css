@@ -1267,7 +1267,7 @@ html[data-size="large"] body {
 .band {
   position: relative;
   overflow: hidden;
-  padding: 30px 24px 170px;
+  padding: 30px 24px 186px;
 }
 .band[data-level="safe"] {
   background: var(--paper);
@@ -1284,7 +1284,7 @@ html[data-size="large"] body {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 40px;
+  bottom: 52px;
   z-index: 0;
   width: 100%;
   height: 96px;
@@ -1337,41 +1337,51 @@ html[data-size="large"] body {
   bottom: 0;
   z-index: 0;
   width: 100%;
-  height: 44px;
+  height: 60px;
   pointer-events: none;
 }
-.shore-sand {
-  fill: #eadcc5;
+.shore-shallow {
+  fill: #d4e7e5;
+  opacity: 0.8;
 }
-.shore-wet {
-  stroke: #d8c3a2;
-  stroke-width: 1.2;
+.sand-wet {
+  stop-color: #d6c4a4;
+}
+.sand-damp {
+  stop-color: #e3d4ba;
+}
+.sand-dry {
+  stop-color: #efe4d2;
 }
 .shore-foam {
-  stroke: #ffffff;
-  opacity: 0.95;
-  animation: kg-lap 7s ease-in-out infinite;
+  stroke: #fbfaf4;
 }
-.shore-bubbles {
-  opacity: 0.8;
-  animation: kg-drift 36s linear infinite;
+.shore-foam-front {
+  opacity: 0.9;
+  animation: kg-lap 8s ease-in-out infinite;
+}
+.shore-foam-back {
+  opacity: 0.55;
+  animation: kg-lap 8s ease-in-out -4s infinite;
 }
 @keyframes kg-lap {
   0%, 100% {
-    transform: translate(0, 0);
+    transform: translate(0, 1px);
   }
   50% {
-    transform: translate(-60px, 5px);
+    transform: translate(-40px, -3px);
   }
 }
-.band[data-level="danger"] .shore-sand {
-  fill: rgba(255, 255, 255, 0.16);
+.band[data-level="danger"] .shore-shallow {
+  fill: rgba(255, 255, 255, 0.1);
 }
-.band[data-level="danger"] .shore-wet {
-  stroke: rgba(255, 255, 255, 0.3);
+.band[data-level="danger"] .sand-wet,
+.band[data-level="danger"] .sand-damp,
+.band[data-level="danger"] .sand-dry {
+  stop-color: rgba(255, 255, 255, 0.18);
 }
 .band[data-level="danger"] .shore-foam {
-  stroke: rgba(255, 255, 255, 0.75);
+  stroke: rgba(255, 255, 255, 0.8);
 }
 .tabs {
   margin-top: 14px;
@@ -1379,8 +1389,7 @@ html[data-size="large"] body {
 @media (prefers-reduced-motion: reduce) {
   .wave,
   .band-beam,
-  .shore-foam,
-  .shore-bubbles {
+  .shore-foam {
     animation: none;
   }
 }
@@ -1390,7 +1399,7 @@ html[data-size="large"] body {
 .band-light {
   position: absolute;
   right: max(24px, calc((100% - 1200px) / 2 + 24px));
-  bottom: 92px;
+  bottom: 104px;
   z-index: 0;
   color: var(--ink);
   opacity: 0.55;

@@ -119,13 +119,22 @@ function Sea() {
           <path d={wavePath(76, 6)} strokeWidth="1.1" opacity="0.38" vectorEffect="non-scaling-stroke" />
         </g>
       </svg>
-      {/* The shoreline: wet sand, a darker tide line, and foam that laps in and out over it. */}
-      <svg className="band-shore" viewBox="0 0 1200 44" preserveAspectRatio="none" aria-hidden="true">
-        <path className="shore-sand" d={`${wavePath(20, 5)} L 2400 44 L 0 44 Z`} />
-        <path className="shore-wet" d={wavePath(24, 4)} fill="none" vectorEffect="non-scaling-stroke" />
-        <g className="shore-foam">
-          <path d={wavePath(17, 5)} fill="none" strokeWidth="5" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-          <path className="shore-bubbles" d={wavePath(10, 4)} fill="none" strokeWidth="3" strokeLinecap="round" strokeDasharray="0.1 14" vectorEffect="non-scaling-stroke" />
+      {/* The shoreline: shallow water, then sand that is darker where it's wet, with broken foam lapping at the edge. */}
+      <svg className="band-shore" viewBox="0 0 1200 60" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="kg-sand" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" className="sand-wet" />
+            <stop offset="0.45" className="sand-damp" />
+            <stop offset="1" className="sand-dry" />
+          </linearGradient>
+        </defs>
+        <path className="shore-shallow" d={`${wavePath(10, 4)} L 2400 60 L 0 60 Z`} />
+        <path d={`${wavePath(32, 5)} L 2400 60 L 0 60 Z`} fill="url(#kg-sand)" />
+        <g className="shore-foam shore-foam-back">
+          <path d={wavePath(27, 4)} fill="none" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="70 10 30 6 110 14 45 8" vectorEffect="non-scaling-stroke" />
+        </g>
+        <g className="shore-foam shore-foam-front">
+          <path d={wavePath(31, 5)} fill="none" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="130 6 60 4 90 10 40 5" vectorEffect="non-scaling-stroke" />
         </g>
       </svg>
       <svg className="band-light" width="230" height="160" viewBox="0 0 230 160" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
