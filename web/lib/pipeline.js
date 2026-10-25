@@ -191,11 +191,40 @@ async function notifyFamily(db, { heading, subject, explanation, cues, details =
   return sendFamilyEmail({ to, subject, html, text, alertId });
 }
 
+// The same email or page checked again (reopened, reloaded, or Gmail redrawing it) within this
+// window reuses the earlier result, so the family gets one email per scam, not one per view.
+const REPEAT_WINDOW_MIN = 360;
+const inFlight = new Map();
+
+function repeatKeyFor(input) {
+  if (input.source === "gmail") {
+    const start = input.subject ? "" : String(input.text || "").replace(/\s+/g, " ").slice(0, 300);
+    return `gmail|${input.sender || ""}|${input.subject || ""}|${start}`;
+  }
+  if (input.source === "web" && input.url) return `web|${String(input.url).split("#")[0]}`;
+  return null;
+}
+
 /**
  * Analyze content from the extension, the Gmail Scrutinize button, or the dashboard.
  * input: { source: 'web'|'gmail'|'paste', text, url, title, sender, subject }
  */
-export async function analyzeContent(input, { forceAI = false, alwaysNotify = false } = {}) {
+export async function analyzeContent(input, opts = {}) {
+  // "Ask family for a second opinion" is a deliberate request, so it always runs and always emails.
+  const key = opts.alwaysNotify ? null : repeatKeyFor(input);
+  if (!key) return runAnalysis(input, opts, null);
+  // Two checks of the same thing at once (Gmail can draw an email twice) share one answer.
+  if (inFlight.has(key)) return inFlight.get(key);
+  const p = runAnalysis(input, opts, key);
+  inFlight.set(key, p);
+  try {
+    return await p;
+  } finally {
+    inFlight.delete(key);
+  }
+}
+
+async function runAnalysis(input, { forceAI = false, alwaysNotify = false } = {}, repeatKey) {
   const db0 = load();
   const local = analyze(input.text, { sender: input.sender, url: input.url, sensitiveForm: input.sensitiveForm });
 
@@ -210,6 +239,21 @@ export async function analyzeContent(input, { forceAI = false, alwaysNotify = fa
     }
   }
   const verdict = mergeVerdicts(local, ai);
+
+  // Seen this one recently at the same (or a higher) risk? Don't log it or alert the family again.
+  if (repeatKey && verdict.risk !== "low") {
+    const fresh = load();
+    const since = Date.now() - REPEAT_WINDOW_MIN * 60 * 1000;
+    const prior = fresh.events.find((e) => e.repeatKey === repeatKey && Date.parse(e.ts) >= since);
+    if (prior && RANK[verdict.risk] <= RANK[prior.risk]) {
+      const priorAlert = fresh.alerts.find((a) => a.eventIds?.[0] === prior.id);
+      return replyFor(fresh, verdict, aiError, {
+        eventId: prior.id,
+        alertId: priorAlert?.id || null,
+        notified: Boolean(priorAlert?.notified?.length),
+      });
+    }
+  }
 
   // Everyday pages and emails that turn out fine aren't logged. Checks someone asked for always are.
   const shouldSave = verdict.risk !== "low" || input.source === "paste" || alwaysNotify;
@@ -235,6 +279,7 @@ export async function analyzeContent(input, { forceAI = false, alwaysNotify = fa
       aiUsed: verdict.aiUsed,
       hardRules: (verdict.hardRules || []).map((r) => r.rule),
       excerpt: excerptAround(input.text, verdict.cues),
+      repeatKey,
     };
     update((db) => {
       db.events.unshift(event);
@@ -288,7 +333,10 @@ export async function analyzeContent(input, { forceAI = false, alwaysNotify = fa
     }
   }
 
+  return replyFor(db, verdict, aiError, { eventId: event?.id || null, alertId: alert?.id || null, notified });
+}
 
+function replyFor(db, verdict, aiError, { eventId, alertId, notified }) {
   return {
     risk: verdict.risk,
     score: verdict.score,
@@ -302,8 +350,8 @@ export async function analyzeContent(input, { forceAI = false, alwaysNotify = fa
     explanationForFamily: verdict.explanationForFamily,
     aiUsed: verdict.aiUsed,
     aiError,
-    eventId: event?.id || null,
-    alertId: alert?.id || null,
+    eventId,
+    alertId,
     notified,
     familyName: db.family[0]?.name || "your family",
   };

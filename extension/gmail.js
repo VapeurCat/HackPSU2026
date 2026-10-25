@@ -155,8 +155,13 @@
   function addButtons() {
     document.querySelectorAll(".a3s").forEach((body) => {
       if (body.dataset.kingDone || body.closest("[data-kinguard-bar]")) return;
+      // Gmail sometimes nests one message body inside another; only the outer one gets a bar.
+      if (body.parentElement?.closest(".a3s")) return;
       if (!body.innerText || body.innerText.trim().length < 5) return;
       body.dataset.kingDone = "1";
+      // Gmail can redraw an open email with a new body element. If this message already has a bar, keep that one.
+      const msg = body.closest("[data-message-id], .adn");
+      if (msg ? msg.querySelector("[data-kinguard-bar]") : body.previousElementSibling?.dataset?.kinguardBar) return;
 
       const bar = document.createElement("div");
       bar.dataset.kinguardBar = "1";
