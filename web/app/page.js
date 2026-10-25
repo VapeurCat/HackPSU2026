@@ -547,17 +547,46 @@ function TextSizeToggle() {
   );
 }
 
-// A short, neutral description of KinGuard for anyone using the dashboard.
+// Why KinGuard exists and how it helps. Figures are from the FBI's 2025 IC3 Annual Report.
+const IC3_REPORT = "https://www.ic3.gov/AnnualReport/Reports/2025_IC3Report.pdf";
+
 function About() {
   return (
-    <section className="about-card" aria-labelledby="about-h">
-      <h2 id="about-h">What KinGuard does</h2>
-      <p className="about">
-        KinGuard watches for scams while you browse. It checks websites and Gmail messages as they open, flags lookalike web addresses
-        and fake company senders, and pauses payment pages right after a scam warning. Each warning explains the scam in plain
-        language, and the trusted contact gets an email when something looks serious.
+    <article className="about-page" aria-labelledby="about-h">
+      <h2 id="about-h">About KinGuard</h2>
+
+      <div className="about-stats">
+        <div>
+          <b>201,266</b>
+          <span>fraud complaints from Americans 60 and older in 2025</span>
+        </div>
+        <div>
+          <b>$7.7 billion</b>
+          <span>reported lost, an average of $38,500 per person</span>
+        </div>
+      </div>
+
+      <p>
+        In 2025, Americans 60 and older filed 201,266 fraud complaints with the FBI and reported losing $7.7 billion. That's 37
+        percent more complaints than the year before. The most common were fake emails, texts and calls pretending to be a company
+        they trust, tech support pop-ups, investment and cryptocurrency schemes, romance scams, extortion threats, and callers posing
+        as government agencies. Most of them follow the same script: rush the person, scare them, and tell them not to talk to anyone.
       </p>
-    </section>
+
+      <p>
+        KinGuard is built to break that script. It runs in Chrome and Gmail, checks websites and emails as they open, and uses AI to
+        explain in plain language why something looks wrong, before any money moves. When it sees a likely scam, or a payment page
+        right after a warning, it emails a trusted family member, so nobody has to handle it alone. Scammers depend on keeping people
+        isolated. KinGuard keeps family in the loop.
+      </p>
+
+      <p className="about-source">
+        Source:{" "}
+        <a href={IC3_REPORT} target="_blank" rel="noopener noreferrer">
+          FBI Internet Crime Complaint Center, 2025 IC3 Annual Report
+        </a>
+      </p>
+    </article>
   );
 }
 

@@ -1196,3 +1196,68 @@ html[data-size="large"] body {
   background: var(--warn-bg);
   color: #8f5b0a;
 }
+
+/* ---------- About page: plain, editorial, led by the numbers ---------- */
+.about-page {
+  max-width: 680px;
+  margin: 8px auto 0;
+}
+.about-page h2 {
+  font-size: 32px;
+  line-height: 1.2;
+  margin: 0 0 22px;
+  letter-spacing: -0.01em;
+}
+.about-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 3px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+  margin: 0 0 26px;
+}
+.about-stats div {
+  padding: 16px 18px 18px 0;
+}
+.about-stats div + div {
+  padding-left: 18px;
+  border-left: 1px solid var(--line);
+}
+.about-stats b {
+  display: block;
+  font-size: 40px;
+  line-height: 1.1;
+  color: var(--danger);
+  letter-spacing: -0.02em;
+}
+.about-stats span {
+  display: block;
+  margin-top: 4px;
+  font-size: 15px;
+  color: var(--muted);
+}
+.about-page p {
+  font-size: 18px;
+  line-height: 1.7;
+  margin: 0 0 18px;
+}
+.about-page .about-source {
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 26px;
+}
+.about-page .about-source a {
+  color: var(--muted);
+}
+@media (max-width: 560px) {
+  .about-stats {
+    grid-template-columns: 1fr;
+  }
+  .about-stats div + div {
+    padding-left: 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .about-stats b {
+    font-size: 34px;
+  }
+}
