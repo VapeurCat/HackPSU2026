@@ -198,7 +198,8 @@ const inFlight = new Map();
 
 function repeatKeyFor(input) {
   if (input.source === "gmail") {
-    const start = input.subject ? "" : String(input.text || "").replace(/\s+/g, " ").slice(0, 300);
+    // Replies in a thread share a sender and subject, so the start of the message itself tells them apart.
+    const start = String(input.text || "").replace(/^Subject:[^\n]*\n/, "").replace(/\s+/g, " ").trim().slice(0, 300);
     return `gmail|${input.sender || ""}|${input.subject || ""}|${start}`;
   }
   if (input.source === "web" && input.url) return `web|${String(input.url).split("#")[0]}`;

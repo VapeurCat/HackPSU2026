@@ -41,7 +41,7 @@ const KinGuardRules = (() => {
     platformSwitch: {
       w: 3,
       label: "Moving you to another app",
-      re: /\b(move|switch|continue|talk|chat|message|text|add)( me| us| this)?( over)? (on|to|via) (telegram|whatsapp|signal|wechat|viber|kik)\b/i,
+      re: /(\b(move|moving|switch|continue|talk|chat|message|text|add|reach|contact|find|go)\b[^.!?\n]{0,30}\b(on|to|via|over|onto) (telegram|whatsapp|signal|wechat|viber|kik|line app)\b|\b(download|install|get|use|create)\b[^.!?\n]{0,20}\b(telegram|whatsapp|signal|wechat|viber|kik)\b|\bmy (telegram|whatsapp|signal|wechat|viber|kik)\b|\b(telegram|whatsapp|signal|wechat|viber|kik) (id|handle|username|number|account)\b)/i,
     },
     remoteAccess: {
       w: 3,
@@ -61,7 +61,7 @@ const KinGuardRules = (() => {
     bonding: {
       w: 1,
       label: "Fast emotional closeness",
-      re: /\b(my love|my dear|soul ?mate|never felt this way|meant to be|trust me)\b/i,
+      re: /\b(my love|my dear|soul ?mate|never felt this way|meant to be|trust me|you('re| are) (such )?(a |so )?(smart|wise|handsome|beautiful|special)( (man|woman|lady|gentleman|person))?|special connection)\b/i,
     },
     overpayment: {
       w: 3,

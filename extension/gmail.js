@@ -46,6 +46,32 @@
     return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   }
 
+  // All of a message's text, including the earlier replies Gmail hides behind "•••".
+  // Scams often build up over a thread, so a harmless-looking reply is checked with what came before it.
+  function messageText(body) {
+    const parts = [];
+    const walk = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
+      acceptNode: (n) => (n.parentElement?.closest("style, script") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+    });
+    while (walk.nextNode()) {
+      const s = walk.currentNode.nodeValue.replace(/\s+/g, " ").trim();
+      if (s) parts.push(s);
+    }
+    return parts.join(" ");
+  }
+
+  // Other messages already open in this conversation, above this one.
+  function earlierInThread(body) {
+    const all = [...document.querySelectorAll(".a3s")].filter((b) => !b.parentElement?.closest(".a3s"));
+    const i = all.indexOf(body);
+    return i > 0 ? all.slice(0, i).map(messageText).join("\n\n") : "";
+  }
+
+  function fullText(body, subject) {
+    const earlier = earlierInThread(body);
+    return `Subject: ${subject}\n\n${messageText(body)}${earlier ? `\n\nEarlier in this conversation:\n${earlier}` : ""}`.slice(0, 12000);
+  }
+
   function findSender(body) {
     const msg = body.closest(".adn") || document;
     const el = msg.querySelector(".gD");
@@ -131,7 +157,7 @@
 
     const sender = findSender(body);
     const subject = document.querySelector("h2.hP")?.innerText || "";
-    const text = `Subject: ${subject}\n\n${body.innerText.slice(0, 12000)}`;
+    const text = fullText(body, subject);
     if (paused) return setStatus("paused");
     chrome.runtime.sendMessage({ type: "COUNT", kind: "email" }); // just a count, nothing about the email
     const local = KinGuardRules.analyze(text, { sender });
@@ -182,7 +208,7 @@
         btn.textContent = "Sending…";
         const subject = document.querySelector("h2.hP")?.innerText || "";
         chrome.runtime.sendMessage(
-          { type: "SCRUTINIZE", sender: findSender(body), subject, text: body.innerText.slice(0, 12000) },
+          { type: "SCRUTINIZE", sender: findSender(body), subject, text: fullText(body, subject) },
           (v) => {
             const failed = chrome.runtime.lastError || !v || v.error;
             btn.disabled = !failed;
