@@ -137,8 +137,22 @@ function Sea() {
           <path d={wavePath(31, 5)} fill="none" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="130 6 60 4 90 10 40 5" vectorEffect="non-scaling-stroke" />
         </g>
       </svg>
-      <svg className="band-light" width="230" height="160" viewBox="0 0 230 160" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      {/* A small sailboat crossing the far wave, very slowly. */}
+      <svg className="band-boat" width="34" height="30" viewBox="0 0 34 30" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round">
+        <path d="M17 3 V 22" />
+        <path className="boat-sail" d="M17 4 L 29 20 L 17 20 Z" />
+        <path className="boat-sail" d="M16 8 L 7 20 L 16 20 Z" />
+        <path d="M4 23 L 30 23 L 26 28 L 8 28 Z" />
+      </svg>
+      <svg className="band-light" width="230" height="230" viewBox="0 0 230 230" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
         <circle className="band-sun" cx="78" cy="78" r="30" strokeWidth="1.2" />
+        <g className="sun-glints" strokeWidth="1.6">
+          <path d="M60 170 H 96" />
+          <path d="M66 182 H 90" />
+          <path d="M56 194 H 74 M82 194 H 100" />
+          <path d="M70 206 H 86" />
+        </g>
+        <rect className="band-lamp" x="181" y="42" width="14" height="12" stroke="none" />
         <path d="M30 34 q 6 -6 12 0 q 6 -6 12 0" strokeWidth="1.2" opacity="0.7" />
         <path d="M62 22 q 4 -4 8 0 q 4 -4 8 0" strokeWidth="1.1" opacity="0.55" />
         <g className="band-beam" strokeWidth="1.2">
