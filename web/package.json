@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "test-rules": "node scripts/test-rules.cjs",
-    "test-scams": "node scripts/test-scams.cjs"
+    "test-scams": "node scripts/test-scams.cjs",
+    "bench-ai": "node --env-file=.env.local scripts/bench-ai.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.31.0",
