@@ -14,7 +14,49 @@ function whenOf(ts) {
   return sameDay ? timeOf(ts) : d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
 }
 function sourceName(s) {
-  return { web: "Web page", gmail: "Email", paste: "Checked message", bank: "Bank" }[s] || s;
+  return { web: "Web page", gmail: "Email", paste: "Checked message", extension: "KinGuard" }[s] || s;
+}
+// "just now", "5 min ago", "2 hr ago", or the day for older things.
+function relTime(ts) {
+  const mins = Math.round((Date.now() - Date.parse(ts)) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  if (mins < 24 * 60 && new Date(ts).toDateString() === new Date().toDateString()) return `${Math.round(mins / 60)} hr ago`;
+  return whenOf(ts);
+}
+function dayLabel(ts) {
+  const d = new Date(ts).toDateString();
+  const today = new Date();
+  const yesterday = new Date(Date.now() - 864e5);
+  if (d === today.toDateString()) return "Today";
+  if (d === yesterday.toDateString()) return "Yesterday";
+  return new Date(ts).toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
+}
+
+// Small line icons (instead of emoji), drawn in the current text color.
+const ICONS = {
+  globe: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 0c2.5 2.4 3.8 5.4 3.8 9s-1.3 6.6-3.8 9m0-18c-2.5 2.4-3.8 5.4-3.8 9s1.3 6.6 3.8 9M3.5 9h17M3.5 15h17",
+  mail: "M4 6h16v12H4zM4 7l8 6 8-6",
+  card: "M3 6h18v12H3zM3 10h18M7 15h4",
+  warning: "M12 4 2.5 20h19L12 4Zm0 6v4m0 3v.5",
+  check: "M5 12.5l4.5 4.5L19 7.5",
+  pause: "M8 5v14M16 5v14",
+  shield: "M12 3 4.5 6v5.5c0 4.6 3.1 8.1 7.5 9.5 4.4-1.4 7.5-4.9 7.5-9.5V6L12 3Z",
+  circle: "M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z",
+  text: "M4 18 9 6l5 12M5.8 14h6.4M15 18l3-8 3 8M15.9 16h4.2",
+};
+function Icon({ name, size = 18 }) {
+  return (
+    <svg className="icon" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <path d={ICONS[name] || ICONS.circle} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function sourceIcon(e) {
+  if (e.type === "activity") return "pause";
+  if (e.type === "payment_attempt" || e.kind === "pay_attempt") return "card";
+  if (e.source === "gmail") return "mail";
+  return "globe";
 }
 
 async function post(url, body, method = "POST") {
@@ -87,6 +129,7 @@ function StatusBand({ data, refresh }) {
             <Shield /> KinGuard
           </span>
           <div className="header-tools">
+            <TextSizeToggle />
             <SettingsMenu data={data} refresh={refresh} />
             <DevMenu data={data} refresh={refresh} />
           </div>
@@ -165,13 +208,28 @@ function Guide({ guide, help }) {
   );
 }
 
-function AlertCard({ alert, data, onStatus, onDelete, startOpen = false }) {
+// How an alert should look: red for an open scam, amber for suspicious, green once marked safe.
+function alertTone(a) {
+  if (a.status === "safe") return "safe";
+  if (a.status === "confirmed_scam") return "confirmed";
+  if (a.status === "merged") return "muted";
+  return a.severity === "medium" ? "warn" : "danger";
+}
+
+const DECISION_SHORT = { closed: "closed the page", continued: "continued anyway", trusted: "trusted the page" };
+const DECISION_LONG = { closed: "closed the page", continued: "chose to continue anyway", trusted: "clicked “I trust this page” and stayed on it" };
+
+function AlertCard({ alert, data, onStatus, onDelete, startOpen = false, fresh = false }) {
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState(startOpen);
   const bodyId = `alert-body-${alert.id}`;
-  // One line for the collapsed card: where it happened.
+  const tone = alertTone(alert);
+  // Where it happened, in one line.
   const where = Object.fromEntries(alert.facts || []);
-  const whereText = where["Email from"] ? `Email from ${where["Email from"]}` : where.Website || where.Payment || "";
+  const whereText = where["Email from"] ? `Email from ${where["Email from"]}` : where.Website ? `On ${where.Website}` : "";
+  const icon = alert.kind === "pay_attempt" ? "card" : where["Email from"] ? "mail" : "globe";
+  const statusText = { safe: "Marked safe", confirmed_scam: "Confirmed scam", merged: "Combined into a newer alert" }[alert.status];
+  const keyFacts = (alert.facts || []).filter(([k]) => !["Full address", "Page title"].includes(k));
 
   const set = async (status) => {
     setBusy(true);
@@ -179,100 +237,95 @@ function AlertCard({ alert, data, onStatus, onDelete, startOpen = false }) {
     setBusy(false);
   };
 
-  const statusText = {
-    safe: "Marked safe",
-    confirmed_scam: "Confirmed scam",
-    merged: "Combined into a newer alert",
-  }[alert.status];
-
   return (
     // A collapsed card opens when clicked anywhere; the title button keeps it keyboard-accessible.
     <article
-      className="alert"
-      data-kind={alert.kind}
-      data-status={alert.status}
+      className={`alert${fresh ? " fresh" : ""}`}
+      data-tone={tone}
       data-expanded={expanded}
       onClick={expanded ? undefined : () => setExpanded(true)}
     >
       <div className="alert-top">
+        <span className="alert-icon" aria-hidden="true">
+          <Icon name={icon} size={20} />
+        </span>
         <h3 className="alert-heading">
           <button type="button" className="alert-toggle" aria-expanded={expanded} aria-controls={bodyId} onClick={() => setExpanded((x) => !x)}>
             <span className="alert-title">{alert.title}</span>
-            <span className="when">{timeOf(alert.ts)}</span>
+            <span className="when" title={new Date(alert.ts).toLocaleString()}>{relTime(alert.ts)}</span>
             <span className="chevron" aria-hidden="true">▾</span>
           </button>
         </h3>
         <DeleteButton label={`alert: ${alert.title}`} onDelete={() => onDelete(alert.id)} />
       </div>
-      {!expanded && (
-        <p className="alert-summary">
-          {statusText && <span className="status-pill">{statusText}</span>}
-          {whereText}
-          {alert.decision && ` · ${data.person.name} ${{ closed: "closed the page", continued: "continued anyway", trusted: "trusted the page" }[alert.decision]}`}
-        </p>
-      )}
+      <p className="alert-summary">
+        {statusText && <span className="status-pill">{statusText}</span>}
+        {fresh && <span className="status-pill new">New</span>}
+        {whereText}
+        {alert.decision && ` · ${data.person.name} ${DECISION_SHORT[alert.decision]}`}
+      </p>
       {expanded && (
-      <div id={bodyId}>
-      <p>{alert.explanation}</p>
+        <div id={bodyId} className="alert-body">
+          <p className="alert-lead">{alert.explanation}</p>
 
-      {alert.decision && (
-        <p className="decision" data-decision={alert.decision}>
-          {data.person.name}{" "}
-          {{ closed: "closed the page", continued: "chose to continue anyway", trusted: "clicked “I trust this page” and stayed on it" }[alert.decision]}{" "}
-          at {timeOf(alert.decidedAt)}.
-        </p>
-      )}
-
-      {alert.facts?.length > 0 && (
-        <dl className="facts">
-          {alert.facts.map(([k, v]) => (
-            <Fragment key={k}>
-              <dt>{k}</dt>
-              <dd>{v}</dd>
-            </Fragment>
-          ))}
-        </dl>
-      )}
-
-      {alert.excerpt && (
-        <details className="saw">
-          <summary>What {data.person.name} saw</summary>
-          <blockquote>{alert.excerpt}</blockquote>
-        </details>
-      )}
-
-
-      <Signs cues={alert.cues} />
-
-      <Guide guide={data.guides?.[alert.guideKey]} help={data.help} />
-
-      {alert.status === "open" ? (
-        <div className="actions">
-          <button className="btn btn-primary" disabled={busy} onClick={() => set("confirmed_scam")}>
-            Confirm it's a scam
-          </button>
-          <button className="btn" disabled={busy} onClick={() => set("safe")}>
-            Mark as safe
-          </button>
-        </div>
-      ) : (
-        <div className="actions">
-          <span className="when">{statusText}</span>
-          {alert.status !== "merged" && (
-            <button className="btn" disabled={busy} onClick={() => set("open")}>
-              Reopen
-            </button>
+          {alert.decision && (
+            <p className="decision" data-decision={alert.decision}>
+              {data.person.name} {DECISION_LONG[alert.decision]} at {timeOf(alert.decidedAt)}.
+            </p>
           )}
-        </div>
-      )}
 
-      {alert.notified?.length > 0 && (
-        <div className="notified">
-          {data.family[0]?.name || "Family"} alerted at {timeOf(alert.notified[0].ts)} by{" "}
-          email ({alert.notified[0].status})
+          {keyFacts.length > 0 && (
+            <dl className="facts">
+              {keyFacts.map(([k, v]) => (
+                <Fragment key={k}>
+                  <dt>{k}</dt>
+                  <dd>{v}</dd>
+                </Fragment>
+              ))}
+            </dl>
+          )}
+
+          {alert.status === "open" ? (
+            <div className="actions">
+              <button className="btn btn-primary" disabled={busy} onClick={() => set("confirmed_scam")}>
+                Confirm it's a scam
+              </button>
+              <button className="btn" disabled={busy} onClick={() => set("safe")}>
+                Mark as safe
+              </button>
+            </div>
+          ) : (
+            alert.status !== "merged" && (
+              <div className="actions">
+                <button className="btn" disabled={busy} onClick={() => set("open")}>
+                  Reopen
+                </button>
+              </div>
+            )
+          )}
+
+          <details className="more">
+            <summary>More details</summary>
+            {where["Full address"] && (
+              <p className="more-line">
+                <strong>Full address:</strong> {where["Full address"]}
+              </p>
+            )}
+            {alert.excerpt && (
+              <>
+                <strong>What {data.person.name} saw</strong>
+                <blockquote className="saw-quote">{alert.excerpt}</blockquote>
+              </>
+            )}
+            <Signs cues={alert.cues} />
+            <Guide guide={data.guides?.[alert.guideKey]} help={data.help} />
+            {alert.notified?.length > 0 && (
+              <div className="notified">
+                {data.family[0]?.name || "Family"} emailed at {timeOf(alert.notified[0].ts)} ({alert.notified[0].status})
+              </div>
+            )}
+          </details>
         </div>
-      )}
-      </div>
       )}
     </article>
   );
@@ -280,26 +333,116 @@ function AlertCard({ alert, data, onStatus, onDelete, startOpen = false }) {
 
 const ALERTS_SHOWN = 4;
 
-function Alerts({ data, onStatus, onDelete }) {
+function Alerts({ data, onStatus, onDelete, freshIds }) {
   const [showAll, setShowAll] = useState(false);
   const open = data.alerts.filter((a) => a.status === "open");
   const closed = data.alerts.filter((a) => a.status !== "open");
   const all = [...open, ...closed];
   const shown = showAll ? all : all.slice(0, ALERTS_SHOWN);
   const hidden = all.length - shown.length;
+  const t = data.stats?.today || { pages: 0, emails: 0 };
   return (
     <section aria-labelledby="alerts-h">
       <h2 id="alerts-h">Alerts</h2>
       <p className="section-note">High-risk moments worth a closer look.</p>
-      {open.length === 0 && <div className="empty">No open alerts. You'll see one here, and get an email, the moment something looks like a scam.</div>}
+      {all.length === 0 && (
+        <div className="empty calm">
+          <Icon name="shield" size={28} />
+          <div>
+            <strong>No warnings right now.</strong>
+            <span>
+              KinGuard checked {t.pages} page{t.pages === 1 ? "" : "s"} and {t.emails} email{t.emails === 1 ? "" : "s"} today. You'll see an alert here, and
+              get an email, the moment something looks like a scam.
+            </span>
+          </div>
+        </div>
+      )}
       {shown.map((a) => (
-        <AlertCard key={a.id} alert={a} data={data} onStatus={onStatus} onDelete={onDelete} startOpen={a.id === open[0]?.id} />
+        <AlertCard key={a.id} alert={a} data={data} onStatus={onStatus} onDelete={onDelete} startOpen={a.id === open[0]?.id} fresh={freshIds.has(a.id)} />
       ))}
       {(hidden > 0 || showAll) && all.length > ALERTS_SHOWN && (
         <button type="button" className="btn more" onClick={() => setShowAll((x) => !x)}>
           {showAll ? "Show fewer" : `Show ${hidden} more alert${hidden === 1 ? "" : "s"}`}
         </button>
       )}
+    </section>
+  );
+}
+
+// What KinGuard did today, so a quiet day still shows it's working.
+function TodayTiles({ data }) {
+  const s = data.stats || { today: { pages: 0, emails: 0 }, warningsWeek: 0 };
+  const tiles = [
+    { n: s.today.pages, label: "pages checked today", icon: "globe" },
+    { n: s.today.emails, label: "emails checked today", icon: "mail" },
+    { n: s.warningsWeek, label: "warnings this week", icon: "warning", tone: s.warningsWeek ? "warn" : "" },
+  ];
+  return (
+    <div className="tiles" role="group" aria-label="KinGuard activity">
+      {tiles.map((t) => (
+        <div className="tile" key={t.label} data-tone={t.tone}>
+          <Icon name={t.icon} size={20} />
+          <b>{t.n}</b>
+          <span>{t.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Setup checklist: shows until everything is ready (or someone hides it).
+function SetupChecklist({ data }) {
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    try {
+      setHidden(localStorage.getItem("kg-hide-setup") === "1");
+    } catch {}
+  }, []);
+  const seen = data.stats?.extensionSeen;
+  const extOn = seen && Date.now() - Date.parse(seen) < 3 * 864e5;
+  const items = [
+    { done: Boolean(data.person?.name), label: "Name of the person KinGuard protects", fix: "Set it in Settings.", settings: true },
+    { done: Boolean(data.contact?.email), label: "Trusted contact's email", fix: "Add it in Settings so alerts can be emailed.", settings: true },
+    { done: Boolean(extOn), label: "Browser extension connected", fix: "Load the extension folder in chrome://extensions, then open any website." , detail: extOn ? `Last seen ${relTime(seen)}` : "" },
+    { done: Boolean(data.config?.gemini), label: "AI checking", fix: "Add GEMINI_API_KEY to web/.env.local and restart." },
+    { done: Boolean(data.config?.email), label: "Email alerts", fix: "Add RESEND_API_KEY to web/.env.local and restart." },
+  ];
+  const doneCount = items.filter((i) => i.done).length;
+  if (hidden || doneCount === items.length) return null;
+  const hide = () => {
+    try {
+      localStorage.setItem("kg-hide-setup", "1");
+    } catch {}
+    setHidden(true);
+  };
+  return (
+    <section className="setup" aria-labelledby="setup-h">
+      <div className="setup-head">
+        <h2 id="setup-h">Finish setting up KinGuard</h2>
+        <span className="setup-count">{doneCount} of {items.length} done</span>
+      </div>
+      <div className="setup-bar" aria-hidden="true">
+        <span style={{ width: `${(doneCount / items.length) * 100}%` }} />
+      </div>
+      <ul className="setup-list">
+        {items.map((i) => (
+          <li key={i.label} data-done={i.done}>
+            <span className="setup-mark">{i.done ? <Icon name="check" size={16} /> : null}</span>
+            <span>
+              <strong>{i.label}</strong>
+              {i.done ? i.detail && <small>{i.detail}</small> : <small>{i.fix}</small>}
+            </span>
+            {!i.done && i.settings && (
+              <button type="button" className="btn small" onClick={() => window.dispatchEvent(new Event("kg-open-settings"))}>
+                Open Settings
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+      <button type="button" className="setup-hide" onClick={hide}>
+        Hide this checklist
+      </button>
     </section>
   );
 }
@@ -314,17 +457,25 @@ const FILTERS = [
 function Timeline({ data, onDeleteEvent }) {
   const [filter, setFilter] = useState("all");
 
-  const items = useMemo(() => {
-    const evs = data.events.map((e) => ({ ...e, kind: e.type === "payment_attempt" ? "money" : e.source === "gmail" ? "email" : "scam" }));
-    return evs
+  const groups = useMemo(() => {
+    const kindOf = (e) => (e.type === "activity" ? "activity" : e.type === "payment_attempt" ? "money" : e.source === "gmail" ? "email" : "scam");
+    const items = data.events
+      .map((e) => ({ ...e, kind: kindOf(e) }))
       .filter((i) => filter === "all" || i.kind === filter || (filter === "scam" && i.kind === "email"))
       .sort((a, b) => Date.parse(b.ts) - Date.parse(a.ts))
-      .slice(0, 40);
+      .slice(0, 60);
+    const out = [];
+    for (const i of items) {
+      const label = dayLabel(i.ts);
+      if (!out.length || out[out.length - 1].label !== label) out.push({ label, items: [] });
+      out[out.length - 1].items.push(i);
+    }
+    return out;
   }, [data, filter]);
 
   return (
     <section aria-labelledby="tl-h">
-      <h2 id="tl-h">{data.person.name}'s timeline</h2>
+      <h2 id="tl-h">Timeline</h2>
       <p className="section-note">Every warning in one place, so the clues can be connected.</p>
       <div className="filters" role="group" aria-label="Filter timeline">
         {FILTERS.map(([key, label]) => (
@@ -333,32 +484,66 @@ function Timeline({ data, onDeleteEvent }) {
           </button>
         ))}
       </div>
-      {items.length === 0 ? (
-        <div className="empty">Nothing here yet.</div>
+      {groups.length === 0 ? (
+        <div className="empty">Nothing here yet. Warnings, checked emails and pauses will show up here.</div>
       ) : (
-        <ol className="timeline">
-          {items.map((i) => (
-            <li key={i.id} data-risk={i.risk}>
-              <DeleteButton label={`timeline entry: ${i.title}`} onDelete={() => onDeleteEvent(i.id)} />
-              <div className="tl-title">
-                {i.title}
-                {i.risk !== "low" && (
-                  <span className="risk-pill" data-risk={i.risk}>
-                    {i.risk === "high" ? "High risk" : "Suspicious"}
+        groups.map((g) => (
+          <div className="tl-day" key={g.label}>
+            <h3 className="tl-day-label">{g.label}</h3>
+            <ol className="timeline">
+              {g.items.map((i) => (
+                <li key={i.id} data-risk={i.risk} data-kind={i.kind}>
+                  <span className="tl-icon" aria-hidden="true">
+                    <Icon name={sourceIcon(i)} size={16} />
                   </span>
-                )}
-              </div>
-              <div className="tl-meta">
-                {whenOf(i.ts)}, {sourceName(i.source).toLowerCase()}
-                {i.scamTypeName ? `: ${i.scamTypeName}` : ""}
-                {i.stage ? ` (pig butchering stage ${i.stage} of 4)` : ""}
-              </div>
-              {i.explanationForFamily && <div className="tl-body">{i.explanationForFamily}</div>}
-            </li>
-          ))}
-        </ol>
+                  <DeleteButton label={`timeline entry: ${i.title}`} onDelete={() => onDeleteEvent(i.id)} />
+                  <div className="tl-title">
+                    {i.title}
+                    {i.risk !== "low" && (
+                      <span className="risk-pill" data-risk={i.risk}>
+                        {i.risk === "high" ? "High risk" : "Suspicious"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="tl-meta">
+                    {timeOf(i.ts)} · {sourceName(i.source)}
+                    {i.scamTypeName ? ` · ${i.scamTypeName}` : ""}
+                    {i.stage ? ` (pig butchering stage ${i.stage} of 4)` : ""}
+                  </div>
+                  {i.explanationForFamily && <div className="tl-body">{i.explanationForFamily}</div>}
+                </li>
+              ))}
+            </ol>
+          </div>
+        ))
       )}
     </section>
+  );
+}
+
+// Larger text for easier reading, remembered on this computer.
+function TextSizeToggle() {
+  const [large, setLarge] = useState(false);
+  useEffect(() => {
+    try {
+      const on = localStorage.getItem("kg-large-text") === "1";
+      setLarge(on);
+      document.documentElement.dataset.size = on ? "large" : "";
+    } catch {}
+  }, []);
+  const toggle = () => {
+    const on = !large;
+    setLarge(on);
+    document.documentElement.dataset.size = on ? "large" : "";
+    try {
+      localStorage.setItem("kg-large-text", on ? "1" : "0");
+    } catch {}
+  };
+  return (
+    <button type="button" className="dev-toggle" aria-pressed={large} onClick={toggle} title="Make the text bigger">
+      <Icon name="text" size={16} />
+      {large ? "Normal text" : "Larger text"}
+    </button>
   );
 }
 
@@ -421,6 +606,13 @@ function SettingsMenu({ data, refresh }) {
     setTests(null);
     setOpen(true);
   };
+
+  // The setup checklist's "Open Settings" buttons.
+  useEffect(() => {
+    const openIt = () => start();
+    window.addEventListener("kg-open-settings", openIt);
+    return () => window.removeEventListener("kg-open-settings", openIt);
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -683,6 +875,26 @@ export default function Dashboard() {
     await post(`/api/alerts/${id}`, { status }, "PATCH");
     await refresh();
   };
+  // Highlight alerts that arrive while the dashboard is open, and show it in the tab title.
+  const known = useRef(null);
+  const [freshIds, setFreshIds] = useState(new Set());
+  useEffect(() => {
+    if (!data) return;
+    const ids = data.alerts.map((a) => a.id);
+    if (known.current) {
+      const added = ids.filter((id) => !known.current.has(id));
+      if (added.length) {
+        setFreshIds((prev) => new Set([...prev, ...added]));
+        document.title = `(${added.length}) New alert · KinGuard`;
+        setTimeout(() => {
+          setFreshIds((prev) => new Set([...prev].filter((id) => !added.includes(id))));
+          document.title = "KinGuard";
+        }, 12000);
+      }
+    }
+    known.current = new Set(ids);
+  }, [data]);
+
   const deleteAlert = async (id) => {
     await post(`/api/alerts/${id}`, {}, "DELETE");
     await refresh();
@@ -692,17 +904,19 @@ export default function Dashboard() {
     await refresh();
   };
 
-  // Two views: Alerts (what needs a look) and History (timeline and sent emails). The address keeps the choice.
+  // Two views: Alerts (what needs a look) and History (timeline and sent emails).
+  // The choice is remembered for this visit (not in the address, which Next.js manages).
   const [view, setView] = useState("alerts");
   useEffect(() => {
-    const fromHash = () => setView(location.hash === "#history" ? "history" : "alerts");
-    fromHash();
-    window.addEventListener("hashchange", fromHash);
-    return () => window.removeEventListener("hashchange", fromHash);
+    try {
+      if (sessionStorage.getItem("kg-view") === "history") setView("history");
+    } catch {}
   }, []);
   const show = (v) => {
     setView(v);
-    history.replaceState(null, "", v === "history" ? "#history" : location.pathname);
+    try {
+      sessionStorage.setItem("kg-view", v);
+    } catch {}
   };
 
   if (!data) {
@@ -722,8 +936,10 @@ export default function Dashboard() {
       </nav>
       {view === "alerts" ? (
         <main className="single">
+          <SetupChecklist data={data} />
+          <TodayTiles data={data} />
           <About />
-          <Alerts data={data} onStatus={setStatus} onDelete={deleteAlert} />
+          <Alerts data={data} onStatus={setStatus} onDelete={deleteAlert} freshIds={freshIds} />
         </main>
       ) : (
         <main>
