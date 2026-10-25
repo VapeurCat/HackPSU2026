@@ -63,7 +63,7 @@ function StatusBand({ data, refresh }) {
 
   let level = "safe";
   let line = `${name} looks safe.`;
-  let sub = "No scam warnings right now. KinGuard is watching the browser, email and bank activity.";
+  let sub = "No scam warnings right now. KinGuard is watching websites and Gmail.";
 
   if (paying) {
     level = "danger";

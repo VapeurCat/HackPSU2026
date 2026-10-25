@@ -1,11 +1,11 @@
 :root {
-  --ink: #16302a;
-  --paper: #edf2ef;
+  --ink: #15301f;
+  --paper: #f0f5ec;
   --surface: #ffffff;
-  --line: #c9d6d0;
-  --muted: #55706a;
-  --safe: #23784f;
-  --safe-bg: #e3f2ea;
+  --line: #cddbc6;
+  --muted: #4f6b56;
+  --safe: #1d7a43;
+  --safe-bg: #dcefd8;
   --warn: #8f5b0a;
   --warn-bg: #fbf0dc;
   --danger: #b42318;
@@ -52,7 +52,11 @@ a {
   transition: background-color 400ms ease;
 }
 .band[data-level="safe"] {
-  background: var(--safe-bg);
+  background: var(--safe);
+  color: #fff;
+}
+.band[data-level="safe"] .status-sub {
+  color: #e3f5e8;
 }
 .band[data-level="warn"] {
   background: var(--warn-bg);
