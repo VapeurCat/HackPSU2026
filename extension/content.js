@@ -84,12 +84,16 @@
     });
   }
 
-  // First find out whether this site is trusted, then check the page.
-  chrome.runtime.sendMessage({ type: "IS_TRUSTED", host }, (r) => {
-    trusted = !chrome.runtime.lastError && Boolean(r?.trusted);
-    check();
-    // Scam pages often build their scary content with JavaScript after loading.
-    setTimeout(check, 1500);
-    setTimeout(check, 5000);
+  // First see whether KinGuard is paused (from the toolbar pop-up) and whether this site is trusted, then check the page.
+  chrome.storage.local.get("pausedUntil", ({ pausedUntil }) => {
+    if (pausedUntil && pausedUntil > Date.now()) return;
+    chrome.runtime.sendMessage({ type: "IS_TRUSTED", host }, (r) => {
+      trusted = !chrome.runtime.lastError && Boolean(r?.trusted);
+      if (!isSearchPage()) chrome.runtime.sendMessage({ type: "COUNT", kind: "page" }); // just a count, no address
+      check();
+      // Scam pages often build their scary content with JavaScript after loading.
+      setTimeout(check, 1500);
+      setTimeout(check, 5000);
+    });
   });
 })();

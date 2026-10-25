@@ -25,6 +25,7 @@ function seed() {
     alerts: [],
     outbox: [],
     trustedSites: [],
+    stats: {},
   };
 }
 
@@ -60,6 +61,7 @@ export function reset() {
     if (old.person) fresh.person = old.person;
     if (old.family?.length) fresh.family = old.family;
     if (old.trustedSites) fresh.trustedSites = old.trustedSites;
+    if (old.extensionSeen) fresh.extensionSeen = old.extensionSeen;
   } catch {}
   save(fresh);
   return fresh;

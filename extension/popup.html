@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>KinGuard</title>
+<style>
+  :root { --ink: #15301f; --muted: #4f6b56; --line: #cddbc6; --paper: #f0f5ec; --safe: #1d7a43; --warn: #8f5b0a; --warn-bg: #fff3cd; --danger: #b42318; }
+  * { box-sizing: border-box; }
+  body { margin: 0; width: 340px; font: 15px/1.45 "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--paper); }
+  header { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: var(--safe); color: #fff; }
+  header[data-state="paused"] { background: var(--warn); }
+  header img { width: 32px; height: 32px; }
+  header strong { display: block; font-size: 17px; }
+  header span { font-size: 13px; opacity: .92; }
+  main { padding: 12px 16px 16px; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .tile { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+  .tile b { display: block; font-size: 22px; line-height: 1.1; }
+  .tile small { color: var(--muted); font-size: 12px; }
+  .site { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
+  .site .label { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
+  .site .host { font-weight: 700; overflow-wrap: anywhere; }
+  .site .verdict { margin-top: 2px; }
+  .site[data-tone="warn"] { border-color: #b7791f; background: var(--warn-bg); }
+  .site[data-tone="danger"] { border-color: var(--danger); background: #fce9e7; }
+  button { font: inherit; font-weight: 700; width: 100%; padding: 9px 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--ink); background: #fff; color: var(--ink); margin-top: 8px; }
+  button.primary { background: var(--ink); color: #fff; }
+  button.link { border: 0; background: none; padding: 4px 0; margin-top: 6px; font-weight: 400; text-decoration: underline; color: var(--muted); width: auto; }
+  .note { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+</style>
+</head>
+<body>
+  <header id="head">
+    <img src="icons/icon48.png" alt="">
+    <div><strong>KinGuard</strong><span id="state">Protection is on</span></div>
+  </header>
+  <main>
+    <div class="tiles">
+      <div class="tile"><b id="pages">–</b><small>pages checked today</small></div>
+      <div class="tile"><b id="emails">–</b><small>emails checked today</small></div>
+    </div>
+    <div class="site" id="site" hidden>
+      <div class="label">This site</div>
+      <div class="host" id="host"></div>
+      <div class="verdict" id="verdict"></div>
+      <button class="link" id="untrust" hidden>Stop trusting this site</button>
+    </div>
+    <button class="primary" id="open">Open dashboard</button>
+    <button id="pause">Pause for 1 hour</button>
+    <p class="note" id="note"></p>
+  </main>
+  <script src="rules.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -3,6 +3,7 @@ import { load, familyContact } from "@/lib/db";
 import { geminiEnabled } from "@/lib/gemini";
 import KinGuardRules from "@/lib/rules.cjs";
 import { factsFor } from "@/lib/pipeline";
+import { summary } from "@/lib/stats";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ export async function GET() {
   return Response.json({
     ...db,
     contact,
+    stats: summary(db),
     alerts,
     config: {
       gemini: geminiEnabled(),

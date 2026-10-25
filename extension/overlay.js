@@ -12,31 +12,31 @@ const KinGuardUI = (() => {
   const CSS = `
     :host { all: initial; }
     * { box-sizing: border-box; }
-    .scrim { position: fixed; inset: 0; z-index: 2147483647; background: rgba(22,48,42,.92);
+    .scrim { position: fixed; inset: 0; z-index: 2147483647; background: rgba(21,48,31,.92);
       display: flex; align-items: center; justify-content: center; padding: 24px;
-      font-family: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif; color: #16302a; }
+      font-family: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif; color: #15301f; }
     .card { background: #fff; border-radius: 18px; max-width: 640px; width: 100%; max-height: 92vh; overflow: auto;
       padding: 32px 34px 26px; box-shadow: 0 20px 60px rgba(0,0,0,.35); border-top: 10px solid #b42318; }
     .card.medium { border-top-color: #c98a12; }
-    .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; color: #55706a; margin-bottom: 14px; }
+    .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; color: #4f6b56; margin-bottom: 14px; }
     h1 { font-size: 34px; line-height: 1.15; margin: 0 0 14px; }
     .say { font-size: 22px; line-height: 1.45; margin: 0 0 18px; }
     .say a { color: #1b5fd1; font-weight: 700; white-space: nowrap; }
     .signs-h { font-weight: 700; font-size: 17px; margin: 0 0 8px; }
     ul { margin: 0 0 20px; padding-left: 22px; font-size: 17px; line-height: 1.5; }
     li { margin-bottom: 4px; }
-    mark { background: #ffe08a; color: #16302a; padding: 0 3px; border-radius: 3px; }
+    mark { background: #ffe08a; color: #15301f; padding: 0 3px; border-radius: 3px; }
     .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-    button { font: inherit; font-size: 20px; font-weight: 700; border-radius: 10px; padding: 14px 22px; cursor: pointer; border: 2px solid #16302a; }
-    .primary { background: #16302a; color: #fff; }
-    .secondary { background: #fff; color: #16302a; }
-    .trust { background: none; border: 0; padding: 6px 2px; font-size: 15px; font-weight: 400; text-decoration: underline; color: #55706a; margin-left: auto; }
+    button { font: inherit; font-size: 20px; font-weight: 700; border-radius: 10px; padding: 14px 22px; cursor: pointer; border: 2px solid #15301f; }
+    .primary { background: #15301f; color: #fff; }
+    .secondary { background: #fff; color: #15301f; }
+    .trust { background: none; border: 0; padding: 6px 2px; font-size: 15px; font-weight: 400; text-decoration: underline; color: #4f6b56; margin-left: auto; }
     button:focus-visible { outline: 3px solid #1b5fd1; outline-offset: 3px; }
-    .family { margin-top: 18px; padding-top: 14px; border-top: 1px solid #c9d6d0; font-size: 17px; color: #23784f; font-weight: 700; }
-    .family.pending { color: #55706a; font-weight: 400; }
+    .family { margin-top: 18px; padding-top: 14px; border-top: 1px solid #cddbc6; font-size: 17px; color: #1d7a43; font-weight: 700; }
+    .family.pending { color: #4f6b56; font-weight: 400; }
     /* "Be careful" notice: big, bright and centered, but it doesn't block the page. */
     .banner { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); width: min(780px, calc(100vw - 32px));
-      z-index: 2147483647; background: #fff3cd; color: #16302a; border: 3px solid #b7791f; border-left-width: 14px;
+      z-index: 2147483647; background: #fff3cd; color: #15301f; border: 3px solid #b7791f; border-left-width: 14px;
       border-radius: 16px; padding: 18px 22px; display: flex; gap: 18px; align-items: flex-start;
       font-family: "Atkinson Hyperlegible", system-ui, sans-serif; box-shadow: 0 14px 40px rgba(0,0,0,.35), 0 0 0 4px rgba(183,121,31,.25);
       animation: kg-pop .4s ease-out, kg-glow 1.2s ease-in-out .4s 3, kg-nudge .45s ease-in-out .5s 2; }
@@ -57,7 +57,7 @@ const KinGuardUI = (() => {
     @keyframes kg-nudge { 0%, 100% { transform: translate(-50%, 0); } 25% { transform: translate(calc(-50% - 6px), 0); } 75% { transform: translate(calc(-50% + 6px), 0); } }
     @media (prefers-reduced-motion: reduce) { .banner { animation: none; } }
     @media (max-width: 560px) { .banner { gap: 12px; padding: 14px 16px; } .banner .icon { width: 40px; height: 40px; font-size: 24px; } .banner h2 { font-size: 22px; } }
-    details.guide { margin: 0 0 20px; border: 1px solid #c9d6d0; border-radius: 12px; background: #f4f8f6; }
+    details.guide { margin: 0 0 20px; border: 1px solid #cddbc6; border-radius: 12px; background: #f3f8f0; }
     details.guide summary { cursor: pointer; padding: 12px 16px; font-size: 18px; font-weight: 700; list-style: none; }
     details.guide summary::-webkit-details-marker { display: none; }
     details.guide summary::after { content: " ▸"; }
@@ -66,7 +66,7 @@ const KinGuardUI = (() => {
     .guide-body { padding: 0 16px 14px; font-size: 17px; line-height: 1.5; }
     .guide-body p { margin: 0 0 10px; }
     .guide-body ul { margin: 0 0 12px; font-size: 17px; }
-    .guide-body h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: #55706a; margin: 14px 0 6px; }
+    .guide-body h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: #4f6b56; margin: 14px 0 6px; }
     .guide-body a { color: #1b5fd1; }
     .guide-body .help { background: #fff; border-radius: 8px; padding: 10px 12px; margin-top: 12px; }
   `;
@@ -77,7 +77,7 @@ const KinGuardUI = (() => {
     const help = KinGuardRules.HELP;
     const link = (s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.name)}</a></li>`;
     return `<details class="guide">
-      <summary>📖 What is this scam? How to stay safe</summary>
+      <summary>${icon("book")} What is this scam? How to stay safe</summary>
       <div class="guide-body">
         <h2>${esc(g.title)}</h2>
         <p>${esc(g.what)}</p>
@@ -91,6 +91,21 @@ const KinGuardUI = (() => {
   }
 
   const SHIELD = `<svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2.5 4.5 7v8.2c0 7 4.8 12.4 11.5 14.3 6.7-1.9 11.5-7.3 11.5-14.3V7L16 2.5Z" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>`;
+
+  // Small line icons (instead of emoji), drawn in the current text color.
+  const ICON_PATHS = {
+    speak: "M4 9v6h4l5 4V5L8 9H4Zm12.5-.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12",
+    book: "M4 5.5C6.5 4.5 9.5 4.5 12 6c2.5-1.5 5.5-1.5 8-.5V19c-2.5-1-5.5-1-8 .5-2.5-1.5-5.5-1.5-8-.5V5.5ZM12 6v13.5",
+    shield: "M12 3 4.5 6v5.5c0 4.6 3.1 8.1 7.5 9.5 4.4-1.4 7.5-4.9 7.5-9.5V6L12 3Z",
+    check: "M5 12.5l4.5 4.5L19 7.5",
+    warning: "M12 4 2.5 20h19L12 4Zm0 6v4m0 3v.5",
+    circle: "M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z",
+    pause: "M8 5v14M16 5v14",
+    search: "M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Zm4.8 11.3L20 20",
+  };
+  function icon(name, size = 18) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-3px;flex:none"><path d="${ICON_PATHS[name]}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  }
 
   function esc(s) {
     return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -164,7 +179,7 @@ const KinGuardUI = (() => {
           ${guideHTML(v.guideKey)}
           <div class="row">
             <button class="primary" data-act="close">Close this page</button>
-            <button class="secondary" data-act="speak">🔊 Read this to me</button>
+            <button class="secondary" data-act="speak">${icon("speak")} Read this to me</button>
             <button class="trust" data-act="trust">I trust this page</button>
           </div>
           <div class="family ${pending ? "pending" : ""}">
@@ -204,7 +219,7 @@ const KinGuardUI = (() => {
           </div>
           <div class="row">
             <button class="ok" data-act="ok">OK, I'll be careful</button>
-            <button class="secondary" data-act="speak">🔊 Read this to me</button>
+            <button class="secondary" data-act="speak">${icon("speak")} Read this to me</button>
             ${official ? "" : `<button class="secondary" data-act="trustsite" title="Stop showing yellow notices on ${esc(pageHost)}">Trust this site</button>`}
           </div>
         </div>
@@ -251,7 +266,7 @@ const KinGuardUI = (() => {
           ${guideHTML(v.guideKey || "payment")}
           <div class="row">
             <button class="primary" data-act="close">Close this page</button>
-            <button class="secondary" data-act="speak">🔊 Read this to me</button>
+            <button class="secondary" data-act="speak">${icon("speak")} Read this to me</button>
             <button class="trust" data-act="continue">I'm paying for something else</button>
           </div>
           <div class="family">

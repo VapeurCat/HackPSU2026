@@ -1,9 +1,15 @@
 {
   "manifest_version": 3,
   "name": "KinGuard",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Spots scams, explains them in plain language, and lets your family know.",
-  "permissions": ["storage"],
+  "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
+  "action": {
+    "default_title": "KinGuard",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png" }
+  },
+  "permissions": ["storage", "activeTab"],
   "host_permissions": ["http://localhost:3000/*"],
   "background": { "service_worker": "background.js" },
   "content_scripts": [

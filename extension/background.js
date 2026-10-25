@@ -26,7 +26,30 @@ async function trustedHosts() {
   }
 }
 
+// Counts of pages and emails checked, kept in the browser too so the pop-up works offline.
+// Only the counts are sent to the dashboard: never which pages or emails.
+async function bumpLocal(kind) {
+  const day = new Date().toDateString();
+  const { localStats = {} } = await chrome.storage.local.get("localStats");
+  const today = localStats[day] || { pages: 0, emails: 0 };
+  today[kind === "email" ? "emails" : "pages"] += 1;
+  await chrome.storage.local.set({ localStats: { [day]: today } }); // keep only today
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
+  if (msg.type === "COUNT") {
+    bumpLocal(msg.kind);
+    call("/api/stats", { kind: msg.kind }).catch(() => {});
+    return;
+  }
+
+  if (msg.type === "ACTIVITY") {
+    call("/api/activity", { activity: msg.activity, until: msg.until })
+      .then(reply)
+      .catch(() => reply({ ok: false }));
+    return true;
+  }
+
   if (msg.type === "IS_TRUSTED") {
     const host = String(msg.host || "").toLowerCase().replace(/^www\./, "");
     trustedHosts()
