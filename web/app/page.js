@@ -96,6 +96,28 @@ function Shield() {
   );
 }
 
+// Header art: thin wave lines and a small lighthouse, drawn in the band's own color.
+function Sea() {
+  return (
+    <>
+      <svg className="band-sea" viewBox="0 0 1200 300" preserveAspectRatio="none" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round">
+        <path d="M0 236 C 150 222, 300 250, 450 236 S 750 222, 900 236 S 1100 250, 1200 238" strokeWidth="1.2" opacity="0.7" />
+        <path d="M0 256 C 170 242, 320 270, 490 256 S 790 242, 940 256 S 1120 268, 1200 258" strokeWidth="1.2" opacity="0.55" />
+        <path d="M0 276 C 130 264, 280 290, 430 276 S 730 262, 880 276 S 1090 288, 1200 278" strokeWidth="1.2" opacity="0.4" />
+      </svg>
+      <svg className="band-light" width="120" height="150" viewBox="0 0 120 150" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+        <path d="M86 140 L 92 50 L 108 50 L 114 140 Z" />
+        <path d="M90 50 L 110 50 L 107 34 L 93 34 Z" />
+        <path d="M95 34 L 100 24 L 105 34" />
+        <path d="M89 98 L 111 98" />
+        <path d="M78 140 L 120 140" />
+        <path d="M93 40 L 4 14" opacity="0.6" />
+        <path d="M93 44 L 4 70" opacity="0.6" />
+      </svg>
+    </>
+  );
+}
+
 function StatusBand({ data, refresh }) {
   const name = data.person.name;
   const family = data.family[0]?.name || "you";
@@ -104,8 +126,8 @@ function StatusBand({ data, refresh }) {
   const recentMedium = data.events.some((e) => e.risk === "medium" && Date.now() - Date.parse(e.ts) < 24 * 3600e3);
 
   let level = "safe";
-  let line = `${name} looks safe.`;
-  let sub = "No scam warnings right now. KinGuard is watching websites and Gmail.";
+  let line = "Calm waters.";
+  let sub = `${name} looks safe. No scam warnings right now. KinGuard is watching websites and Gmail.`;
 
   if (paying) {
     level = "danger";
@@ -123,6 +145,7 @@ function StatusBand({ data, refresh }) {
 
   return (
     <header className="band" data-level={level}>
+      <Sea />
       <div className="band-inner">
         <div className="brand">
           <span className="brand-name">
@@ -134,6 +157,7 @@ function StatusBand({ data, refresh }) {
             <DevMenu data={data} refresh={refresh} />
           </div>
         </div>
+        <p className="status-eyebrow">{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}</p>
         <h1 className="status-line" aria-live="polite">
           {line}
         </h1>
