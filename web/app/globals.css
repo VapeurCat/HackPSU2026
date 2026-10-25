@@ -1580,3 +1580,83 @@ section h2,
   line-height: 1;
   margin: 6px 0 2px;
 }
+
+/* ---------- Red alert: a storm warning at dusk. The lighthouse does its job: beam on, sweeping. ---------- */
+.band[data-level="danger"] {
+  background: linear-gradient(180deg, #172c38 0%, #22394a 45%, #4a3b44 78%, #7a4436 100%);
+  color: #fff;
+}
+.band[data-level="danger"] .status-sub {
+  color: #f6dfd6;
+}
+.status-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 14px;
+  padding: 6px 14px 6px 12px;
+  border-radius: 999px;
+  background: #e8634a;
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+.band[data-level="danger"] .status-eyebrow {
+  margin-bottom: 10px;
+}
+.band[data-level="danger"] .band-sea {
+  color: #9fc2c6;
+  transform: scaleY(1.45);
+  transform-origin: bottom;
+}
+.band[data-level="danger"] .wave {
+  animation-duration: 11s;
+}
+.band[data-level="danger"] .wave-2 {
+  animation-duration: 15s;
+}
+.band[data-level="danger"] .band-sun,
+.band[data-level="danger"] .sun-glints,
+.band[data-level="danger"] .gulls,
+.band[data-level="danger"] .band-boat {
+  display: none;
+}
+.band[data-level="danger"] .band-light {
+  color: #f4ece6;
+  opacity: 0.95;
+}
+.beam-light {
+  fill: #ffd9a0;
+  opacity: 0;
+}
+.band[data-level="danger"] .beam-light {
+  fill: #ffe6b8;
+  opacity: 0.16;
+}
+.band[data-level="danger"] .band-beam {
+  stroke: #ffc98a;
+  animation-duration: 3.5s;
+}
+.band[data-level="danger"] .band-lamp {
+  fill: #ffb067;
+  animation-duration: 1.6s;
+}
+.band[data-level="danger"] .shore-shallow {
+  fill: #3d5560;
+  opacity: 0.85;
+}
+.band[data-level="danger"] .sand-wet {
+  stop-color: #8a7663;
+}
+.band[data-level="danger"] .sand-damp {
+  stop-color: #a28d77;
+}
+.band[data-level="danger"] .sand-dry {
+  stop-color: #b8a48d;
+}
+.band[data-level="danger"] .header-tools button,
+.band[data-level="danger"] .header-tools summary {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.45);
+}

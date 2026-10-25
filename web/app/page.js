@@ -144,9 +144,12 @@ function Sea() {
           <path d="M70 184 H 86" />
         </g>
         <rect className="band-lamp" x="181" y="42" width="14" height="12" stroke="none" />
-        <path d="M30 34 q 6 -6 12 0 q 6 -6 12 0" strokeWidth="1.2" opacity="0.7" />
-        <path d="M62 22 q 4 -4 8 0 q 4 -4 8 0" strokeWidth="1.1" opacity="0.55" />
+        <g className="gulls">
+          <path d="M30 34 q 6 -6 12 0 q 6 -6 12 0" strokeWidth="1.2" opacity="0.7" />
+          <path d="M62 22 q 4 -4 8 0 q 4 -4 8 0" strokeWidth="1.1" opacity="0.55" />
+        </g>
         <g className="band-beam" strokeWidth="1.2">
+          <path className="beam-light" d="M184 44 L 70 14 L 70 82 L 184 48 Z" stroke="none" />
           <path d="M184 44 L 70 14" opacity="0.55" />
           <path d="M184 48 L 70 82" opacity="0.55" />
         </g>
@@ -203,6 +206,14 @@ function StatusBand({ data, refresh }) {
           </div>
         </div>
         <p className="status-eyebrow">{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}</p>
+        {level === "danger" && (
+          <p className="status-flag">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 4 2.5 20h19L12 4Zm0 6v4m0 3v.5" />
+            </svg>
+            Needs your attention
+          </p>
+        )}
         <h1 className="status-line" aria-live="polite">
           {line}
         </h1>
