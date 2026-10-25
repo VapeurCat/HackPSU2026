@@ -155,10 +155,15 @@ function Guide({ guide, help }) {
   );
 }
 
-function AlertCard({ alert, data, onStatus }) {
+function AlertCard({ alert, data, onStatus, startOpen = false }) {
   const events = alert.eventIds.map((id) => data.events.find((e) => e.id === id)).filter(Boolean);
   const txs = (alert.txIds || []).map((id) => data.transactions.find((t) => t.id === id)).filter(Boolean);
   const [busy, setBusy] = useState(false);
+  const [expanded, setExpanded] = useState(startOpen);
+  const bodyId = `alert-body-${alert.id}`;
+  // One line for the collapsed card: where it happened.
+  const where = Object.fromEntries(alert.facts || []);
+  const whereText = where["Email from"] ? `Email from ${where["Email from"]}` : where.Website || where.Payment || "";
 
   const set = async (status) => {
     setBusy(true);
@@ -173,11 +178,23 @@ function AlertCard({ alert, data, onStatus }) {
   }[alert.status];
 
   return (
-    <article className="alert" data-kind={alert.kind} data-status={alert.status}>
-      <div className="alert-head">
-        <h3 className="alert-title">{alert.kind === "correlated" ? `🚨 ${alert.title}` : alert.title}</h3>
-        <span className="when">{timeOf(alert.ts)}</span>
-      </div>
+    <article className="alert" data-kind={alert.kind} data-status={alert.status} data-expanded={expanded}>
+      <h3 className="alert-heading">
+        <button type="button" className="alert-toggle" aria-expanded={expanded} aria-controls={bodyId} onClick={() => setExpanded((x) => !x)}>
+          <span className="alert-title">{alert.kind === "correlated" ? `🚨 ${alert.title}` : alert.title}</span>
+          <span className="when">{timeOf(alert.ts)}</span>
+          <span className="chevron" aria-hidden="true">▾</span>
+        </button>
+      </h3>
+      {!expanded && (
+        <p className="alert-summary">
+          {statusText && <span className="status-pill">{statusText}</span>}
+          {whereText}
+          {alert.decision && ` · ${data.person.name} ${{ closed: "closed the page", continued: "continued anyway", trusted: "trusted the page" }[alert.decision]}`}
+        </p>
+      )}
+      {expanded && (
+      <div id={bodyId}>
       <p>{alert.explanation}</p>
 
       {alert.decision && (
@@ -254,6 +271,8 @@ function AlertCard({ alert, data, onStatus }) {
           {[...new Set(alert.notified.map((n) => ({ sms: "text", call: "phone call" })[n.channel] || "email"))].join(", ")} ({alert.notified[0].status})
         </div>
       )}
+      </div>
+      )}
     </article>
   );
 }
@@ -266,8 +285,8 @@ function Alerts({ data, onStatus }) {
       <h2 id="alerts-h">Alerts</h2>
       <p className="section-note">High-risk moments that need a family member's attention.</p>
       {open.length === 0 && <div className="empty">No open alerts. You'll see one here, and get an email, the moment something looks like a scam.</div>}
-      {open.map((a) => (
-        <AlertCard key={a.id} alert={a} data={data} onStatus={onStatus} />
+      {open.map((a, i) => (
+        <AlertCard key={a.id} alert={a} data={data} onStatus={onStatus} startOpen={i === 0} />
       ))}
       {closed.map((a) => (
         <AlertCard key={a.id} alert={a} data={data} onStatus={onStatus} />

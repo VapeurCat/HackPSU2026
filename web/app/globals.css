@@ -248,6 +248,52 @@ section h2 {
   gap: 12px;
   align-items: baseline;
 }
+.alert-heading {
+  margin: 0;
+}
+.alert-toggle {
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.alert-toggle .alert-title {
+  flex: 1;
+}
+.alert-toggle .chevron {
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+.alert[data-expanded="false"] .chevron {
+  transform: rotate(-90deg);
+}
+.alert[data-expanded="false"] {
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+.alert-summary {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.status-pill {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 700;
+}
 .alert-title {
   font-size: 20px;
   font-weight: 700;
