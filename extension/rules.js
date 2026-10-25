@@ -153,7 +153,7 @@ const KinGuardRules = (() => {
   // Prank pages say so themselves ("this is not a real virus", "prank someone").
   const PRANK = /\b(prank(s|ed|ing)?|this is not a real (virus|warning|alert)|not a real virus|just a joke|joke (site|website|page)|for entertainment (purposes )?only|fake virus (simulator|screen|prank))\b/i;
   // A "prank" page that asks for any of these is treated as a real scam.
-  const ASKS_FOR_SOMETHING = ["callNumber", "remoteAccess", "codeRequest", "paymentApp", "accountPhish", "lookalike", "brandSpoof", "untraceable", "feeToWithdraw", "overpayment", "upfrontFee", "paymentRedirect"];
+  const ASKS_FOR_SOMETHING = ["callNumber", "remoteAccess", "codeRequest", "paymentApp", "accountPhish", "lookalike", "lookalikeLink", "brandSpoof", "untraceable", "feeToWithdraw", "overpayment", "upfrontFee", "paymentRedirect"];
   const FEE_FOR_MONEY = /\b(prize|won|winner|inheritance|inherited|estate|grant|loan|scholarship|refund|settlement|payout|earnings|commission|reward|forgiveness)\b/i;
 
   // Crypto ATM: no real business, agency or bank asks for this. Always high risk.
@@ -555,6 +555,7 @@ const KinGuardRules = (() => {
     boss_gift_cards: "Gift card request from a \"boss\"",
     impersonated_sender: "Sender pretending to be a well-known company",
     lookalike_site: "Lookalike website asking for a password, code or card",
+    lookalike_link: "Email pointing to a lookalike website, with pressure or a request",
     guaranteed_returns: "Guaranteed returns on crypto or trading",
     romance_money: "Affection plus an urgent money request",
     prize_claim: "A surprise prize with pressure to claim it quickly",
@@ -606,7 +607,7 @@ const KinGuardRules = (() => {
     if (rule("crypto_atm")) return "crypto_atm";
     if (rule("fake_captcha")) return "malicious_file";
     if (n("blackmail")) return "sextortion";
-    if (n("lookalike")) return "typosquat";
+    if (n("lookalike") || n("lookalikeLink")) return "typosquat";
     if (n("paymentRedirect") || n("bossRequest")) return "business_payment";
     if (FAMILY_EMERGENCY.test(text)) return "family_emergency";
     if (rule("fake_check") || n("jobOffer")) return "job_scam";
@@ -643,6 +644,9 @@ const KinGuardRules = (() => {
       } catch {}
     }
     const spoof = opts.sender ? senderSpoof(opts.sender) : null;
+    // In an email (no page address), website names written in the text or linked are checked too,
+    // in this message only, not the earlier replies quoted with it.
+    const linkLook = !opts.url ? lookalikeInText(full.split("\n\nEarlier in this conversation:")[0]) : null;
 
     // Long pages are scored in overlapping sections, so warning signs only add up when they appear
     // close together, as they do on scam pages, not scattered across a long, normal page.
@@ -651,7 +655,7 @@ const KinGuardRules = (() => {
     else for (let i = 0; i < full.length; i += SECTION / 2) sections.push(full.slice(i, i + SECTION));
     let best = null;
     for (const section of sections) {
-      const r = scoreSection(section, opts, look, spoof);
+      const r = scoreSection(section, opts, look, spoof, linkLook);
       if (!best || RANK[r.risk] > RANK[best.risk] || (r.risk === best.risk && r.score > best.score)) best = r;
     }
     const { t, cues, score } = best;
@@ -672,11 +676,14 @@ const KinGuardRules = (() => {
     let explanationForElder = scamType ? ELDER_TEXT[scamType] : "";
     if (scamType === "typosquat" && look) {
       explanationForElder = `This website's address is "${look.host}", which looks like ${look.official} but isn't. Scammers make lookalike sites to steal passwords and card numbers. To be safe, type ${look.official} yourself.`;
+    } else if (scamType === "typosquat" && linkLook) {
+      explanationForElder = `This email points you to "${linkLook.host}", which looks like ${linkLook.official} but isn't. Scammers make lookalike sites to steal passwords and card numbers. Don't click it. If you need ${linkLook.brand}, type ${linkLook.official} yourself.`;
     }
 
     return {
       prank,
       lookalike: look,
+      linkLookalike: linkLook,
       risk,
       score,
       cues,
@@ -709,7 +716,7 @@ const KinGuardRules = (() => {
   const SECTION = 1500;
 
   // The cues, hard rules and risk for one section of text.
-  function scoreSection(t, opts, look, spoof) {
+  function scoreSection(t, opts, look, spoof, linkLook) {
     const cues = [];
     let score = 0;
 
@@ -727,6 +734,10 @@ const KinGuardRules = (() => {
     }
     if (spoof) {
       cues.unshift({ cue: spoof.cue, label: spoof.label, quote: spoof.quote });
+      score += 3;
+    }
+    if (linkLook) {
+      cues.unshift({ cue: "lookalikeLink", label: "Link to a lookalike website", quote: `${linkLook.host} (not ${linkLook.official})` });
       score += 3;
     }
 
@@ -753,6 +764,7 @@ const KinGuardRules = (() => {
       hardRules.push({ rule: "impersonated_sender" });
     }
     if (look && (opts.sensitiveForm || has(cues, ["accountPhish", "codeRequest"]))) hardRules.push({ rule: "lookalike_site" });
+    if (linkLook && has(cues, ["accountPhish", "codeRequest", "fakeCharge", "legalThreat", "urgency", "tooGood", ...MONEY])) hardRules.push({ rule: "lookalike_link" });
     const atm = t.match(CRYPTO_ATM);
     if (atm && ATM_ACTION.test(t)) {
       hardRules.push({ rule: "crypto_atm", quote: atm[0] });
@@ -901,13 +913,34 @@ const KinGuardRules = (() => {
       if (label === k) return hit("same name, different ending"); // paypal.co, amazon-com.net is handled below
       if (deconfuse(label) === k) return hit("swapped letters"); // paypa1.com, arnazon.com
       if (b.typo !== false && k.length >= 6 && editDistance(label, k) <= (k.length >= 9 ? 2 : 1)) return hit("misspelled"); // amazom.com
-      if (new RegExp(`(^|[-.])${k}([-.]|$)`).test(label) || new RegExp(`^${k}`).test(label)) {
-        const rest = label.replace(k, "");
-        // Brands that are ordinary words (Target, Chase) need a hyphen, so "targetcenter.org" stays quiet.
-        const separated = b.typo !== false || label.includes("-");
-        if (separated && (PHISHY_WORD.test(rest) || /^-?(com|net|org|us|usa)$/.test(rest))) return hit("brand name plus extra words"); // amazon-account-verify.com
+      // Also with swapped letters undone, so paypa1-secure.com counts like paypal-secure.com.
+      for (const l of new Set([label, deconfuse(label)])) {
+        if (new RegExp(`(^|[-.])${k}([-.]|$)`).test(l) || new RegExp(`^${k}`).test(l)) {
+          const rest = l.replace(k, "");
+          // Brands that are ordinary words (Target, Chase) need a hyphen, so "targetcenter.org" stays quiet.
+          const separated = b.typo !== false || l.includes("-");
+          if (separated && (PHISHY_WORD.test(rest) || /^-?(com|net|org|us|usa)$/.test(rest))) return hit("brand name plus extra words"); // amazon-account-verify.com
+        }
       }
       if (k.length >= 4 && new RegExp(`(^|\\.)${k}(\\.|-)`).test(sub)) return hit("brand name hidden at the start"); // paypal.com.secure-login.xyz
+    }
+    return null;
+  }
+
+  // Website addresses in text ("arnazon.com", "https://paypa1.com/login"). Email addresses are skipped:
+  // the sender is checked separately.
+  const DOMAIN_IN_TEXT = /(?:https?:\/\/)?((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24})(?=[/\s"'<>(),.!?:;]|$)/gi;
+
+  /** The first lookalike website named or linked in this text, or null. */
+  function lookalikeInText(text) {
+    const t = String(text || "");
+    DOMAIN_IN_TEXT.lastIndex = 0;
+    let m;
+    let n = 0;
+    while ((m = DOMAIN_IN_TEXT.exec(t)) && n++ < 300) {
+      if (t[m.index - 1] === "@") continue;
+      const look = lookalikeDomain(m[1]);
+      if (look) return look;
     }
     return null;
   }

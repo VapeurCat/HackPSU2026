@@ -64,6 +64,10 @@ const SCAMS = [
   ["high", "", "Claim free government grant funds of $9,000. Pay the processing fee to release your grant."],
   ["high", "", "Your loan is approved! Pay the insurance fee first to release your funds."],
   ["high", "", "Guaranteed returns with no risk. Double your money with our crypto trading platform."],
+  // Lookalike websites named or linked inside an email
+  ["medium", "Connor DelRosso <someone@gmail.com>", "Visit this website! Arnazon.com"],
+  ["high", "", "Your account will be suspended. Verify your account now at https://arnazon.com/login"],
+  ["medium", "", "Track your order at amazon.com. Links in this email go to: paypa1-secure.com"],
   // Moving the conversation to another app, alone and as part of a longer scam thread
   ["high", "Connor DelRosso <someone@gmail.com>", "Lets move things to Telegram, it is easier for me! Do you need help creating an account? I think you are a smart man, Terry, no help needed!"],
   ["medium", "", "Lets move things to Telegram, it is easier for me!"],
@@ -93,6 +97,7 @@ const SAFE = [
   ["Hometown Market <deals@hometownmarket.example>", "Thanks for entering our holiday sweepstakes! Winners will be announced on December 1. Good luck!"],
   ["", "Congratulations to our science fair winners! Emma took first prize for her project on bees."],
   ["Emma <grandkid@example.com>", "Hi Grandpa, I sent the pictures on WhatsApp. Love you!"],
+  ["Emma <grandkid@example.com>", "I ordered your birthday present on amazon.com, and the tracking is on paypal.com too. See you soon!"],
   ["Church Office <office@stmarks.example>", "Join our WhatsApp group for updates on the bake sale."],
   ["", "Your Social Security statement is available online at ssa.gov. Sign in to my Social Security to view your earnings record."],
 ];

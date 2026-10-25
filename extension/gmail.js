@@ -3,19 +3,21 @@
 // Gmail's class names (.a3s, .gD, h2.hP) are unofficial and may change; they work as of now.
 (() => {
   const STYLE = {
-    bar: "margin:10px 0 14px;padding:10px 14px;border:1px solid #cddbc6;border-radius:10px;background:#f3f8f0;font:15px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;color:#15301f",
+    // Tidewater colors, to match the dashboard: sea-glass card, deep sea text, a soft shadow.
+    bar: "margin:10px 0 16px;padding:12px 16px;border:1px solid #c5dad8;border-radius:16px;background:#eef5f4;font:15px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;color:#15323f;box-shadow:0 1px 2px rgba(21,50,63,.04),0 10px 24px -16px rgba(21,50,63,.3)",
     row: "display:flex;align-items:center;gap:12px;flex-wrap:wrap",
-    btn: "font:600 14px system-ui,sans-serif;padding:6px 12px;border-radius:999px;border:1px solid #15301f;background:#fff;color:#15301f;cursor:pointer;margin-left:auto",
+    btn: "font:600 14px system-ui,sans-serif;padding:9px 18px;border-radius:999px;border:1px solid #1f5a6e;background:#fff;color:#1f5a6e;cursor:pointer;margin-left:auto",
     result: "margin-top:10px",
     // The inbox-row popover reuses the original, larger look.
-    popover: "padding:12px 14px;border:1px solid #cddbc6;border-radius:10px;background:#f0f5ec;font:16px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;color:#15301f",
+    popover: "padding:14px 16px;border:1px solid #c5dad8;border-radius:16px;background:#eef5f4;font:16px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;color:#15323f",
   };
   const STATUS = {
-    checking: ["KinGuard is checking this email…", "#4f6b56", "shield"],
-    closer: ["KinGuard is taking a closer look…", "#4f6b56", "shield"],
-    clean: ["Looks clean: KinGuard found no warning signs.", "#1d7a43", "check"],
-    cleared: ["Looks clean: KinGuard double-checked this email with AI.", "#1d7a43", "check"],
-    paused: ["KinGuard is paused, so this email wasn't checked.", "#8f5b0a", "pause"],
+    // [text, text color, icon, icon circle color]
+    checking: ["KinGuard is checking this email…", "#4a6670", "shield", "#dbe9e8"],
+    closer: ["KinGuard is taking a closer look…", "#4a6670", "shield", "#dbe9e8"],
+    clean: ["Looks clean: KinGuard found no warning signs.", "#1d6656", "check", "#d3ebe4"],
+    cleared: ["Looks clean: KinGuard double-checked this email with AI.", "#1d6656", "check", "#d3ebe4"],
+    paused: ["KinGuard is paused, so this email wasn't checked.", "#8a5a0b", "pause", "#f6e7c8"],
   };
 
   // Paused from the toolbar pop-up? Kept up to date while Gmail is open.
@@ -40,6 +42,11 @@
   };
   function icon(name, size = 18) {
     return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-3px;flex:none"><path d="${ICON_PATHS[name]}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  }
+
+  // An icon in a soft colored circle, for the status line.
+  function badge(name, bg) {
+    return `<span style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:${bg};flex:none">${icon(name, 17)}</span>`;
   }
 
   function esc(s) {
@@ -67,9 +74,25 @@
     return i > 0 ? all.slice(0, i).map(messageText).join("\n\n") : "";
   }
 
+  // Where the links really go. The visible text can say "amazon.com" while the link points somewhere else.
+  // Gmail wraps some links as google.com/url?q=<real address>, so that is unwrapped.
+  function linkTargets(body) {
+    const hosts = new Set();
+    body.querySelectorAll("a[href]").forEach((a) => {
+      try {
+        let url = new URL(a.href);
+        if (/(^|\.)google\.com$/.test(url.hostname) && url.pathname === "/url" && url.searchParams.get("q")) url = new URL(url.searchParams.get("q"));
+        if (/^https?:$/.test(url.protocol)) hosts.add(url.hostname);
+      } catch {}
+    });
+    return [...hosts].slice(0, 40);
+  }
+
   function fullText(body, subject) {
     const earlier = earlierInThread(body);
-    return `Subject: ${subject}\n\n${messageText(body)}${earlier ? `\n\nEarlier in this conversation:\n${earlier}` : ""}`.slice(0, 12000);
+    const links = linkTargets(body);
+    const linkLine = links.length ? `\n\nLinks in this email go to: ${links.join(", ")}` : "";
+    return `Subject: ${subject}\n\n${messageText(body)}${linkLine}${earlier ? `\n\nEarlier in this conversation:\n${earlier}` : ""}`.slice(0, 12000);
   }
 
   function findSender(body) {
@@ -109,14 +132,14 @@
       .map((c) => `<li>${esc(c.label)}: <mark style="background:#ffe08a;padding:0 3px">&ldquo;${esc(c.quote)}&rdquo;</mark></li>`)
       .join("");
     result.innerHTML = `
-      <div style="font-size:18px;font-weight:700">${mark} ${head}</div>
+      <div style="font-size:18px;font-weight:700;color:${v.risk === "high" ? "#a23f28" : v.risk === "medium" ? "#8a5a0b" : "#1d6656"}">${mark} ${head}</div>
       <div>${esc(v.explanationForElder || "")}</div>
       ${signs ? `<ul style="margin:8px 0 0;padding-left:20px">${signs}</ul>` : ""}
-      ${v.risk !== "low" ? `<button type="button" data-speak data-head="${esc(head)}" style="margin-top:10px;font:600 15px system-ui,sans-serif;padding:7px 14px;border-radius:999px;border:1px solid #15301f;background:#fff;color:#15301f;cursor:pointer">${icon("speak")} Read this to me</button>` : ""}
+      ${v.risk !== "low" ? `<button type="button" data-speak data-head="${esc(head)}" style="margin-top:10px;font:600 15px system-ui,sans-serif;padding:7px 14px;border-radius:999px;border:1px solid #1f5a6e;background:#fff;color:#1f5a6e;cursor:pointer">${icon("speak")} Read this to me</button>` : ""}
       ${guideLinks(v)}
       ${
         v.notified
-          ? `<div style="margin-top:8px;color:#1d7a43;font-weight:700">✓ ${auto ? `We've let ${esc(v.familyName || "your family")} know. You're not in trouble.` : `We sent this to ${esc(v.familyName || "your family")} for a second opinion.`}</div>`
+          ? `<div style="margin-top:8px;color:#1d6656;font-weight:700">✓ ${auto ? `We've let ${esc(v.familyName || "your family")} know. You're not in trouble.` : `We sent this to ${esc(v.familyName || "your family")} for a second opinion.`}</div>`
           : ""
       }`;
   }
@@ -141,17 +164,17 @@
   // for the AI check, so normal emails never leave the computer. The family is alerted only for a likely scam.
   function autoCheck(body, bar, status, result) {
     const setStatus = (key) => {
-      status.innerHTML = `${icon(STATUS[key][2])} ${esc(STATUS[key][0])}`;
+      status.innerHTML = `${badge(STATUS[key][2], STATUS[key][3])} ${esc(STATUS[key][0])}`;
       status.style.color = STATUS[key][1];
       status.style.display = "";
       status.title = key === "clean" || key === "cleared" ? NOT_PERFECT : "";
       result.innerHTML =
-        key === "clean" || key === "cleared" ? `<div style="font-size:13px;color:#4f6b56;margin-top:-4px">${NOT_PERFECT}</div>` : "";
+        key === "clean" || key === "cleared" ? `<div style="font-size:13px;color:#4a6670;margin:-2px 0 0 40px">${NOT_PERFECT}</div>` : "";
     };
     const warn = (v) => {
       status.style.display = "none"; // the verdict below says it all
-      bar.style.borderColor = v.risk === "high" ? "#b42318" : "#c98a12";
-      bar.style.background = v.risk === "high" ? "#fce9e7" : "#fbf0dc";
+      bar.style.borderColor = v.risk === "high" ? "#e0a493" : "#e3c78f";
+      bar.style.background = v.risk === "high" ? "#fbece7" : "#fbf3e2";
       render(result, v, { auto: true });
     };
 
@@ -193,7 +216,7 @@
       bar.dataset.kinguardBar = "1";
       bar.style.cssText = STYLE.bar;
       bar.innerHTML = `<div style="${STYLE.row}">
-          <span data-status aria-live="polite" style="font-weight:600;color:${STATUS.checking[1]}">${icon("shield")} ${STATUS.checking[0]}</span>
+          <span data-status aria-live="polite" style="display:inline-flex;align-items:center;gap:10px;font-weight:600;color:${STATUS.checking[1]}">${badge("shield", STATUS.checking[3])} ${STATUS.checking[0]}</span>
           <button type="button" style="${STYLE.btn}" title="Sends this email to your family member with KinGuard's verdict">Ask family for a second opinion</button>
         </div>
         <div data-result style="${STYLE.result}" aria-live="polite"></div>`;
@@ -266,7 +289,7 @@
       btn.title = "Check this email for scams without opening it";
       btn.innerHTML = `${icon("search", 14)} Scrutinize`;
       btn.style.cssText =
-        "flex:none;margin-right:8px;font:700 12px system-ui,sans-serif;padding:2px 8px;border-radius:999px;border:1px solid #15301f;background:#f0f5ec;color:#15301f;cursor:pointer;line-height:18px";
+        "flex:none;margin-right:8px;font:700 12px system-ui,sans-serif;padding:2px 8px;border-radius:999px;border:1px solid #1f5a6e;background:#eef5f4;color:#1f5a6e;cursor:pointer;line-height:18px";
       // Stop Gmail from opening the email when the button is pressed.
       ["mousedown", "mouseup"].forEach((t) => btn.addEventListener(t, (e) => e.stopPropagation()));
       btn.addEventListener("click", (e) => {

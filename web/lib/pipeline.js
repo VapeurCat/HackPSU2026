@@ -67,7 +67,7 @@ function mergeVerdicts(local, ai) {
   // such as pushy ad wording on a normal page, but never lower a high-risk verdict.
   const aiRisk = ["low", "medium", "high"].includes(ai.risk) ? ai.risk : "low";
   // A lookalike address or a fake company sender is a fact about where it came from, so the AI can't clear it.
-  const pinned = local.cues.some((c) => c.cue === "lookalike" || c.cue === "brandSpoof");
+  const pinned = local.cues.some((c) => ["lookalike", "lookalikeLink", "brandSpoof"].includes(c.cue));
   const aiCanClear = local.risk === "medium" && !local.hardRules.length && !pinned && aiRisk === "low";
   const risk = aiCanClear ? "low" : maxRisk(local.risk, aiRisk);
 
