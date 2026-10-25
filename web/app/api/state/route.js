@@ -1,7 +1,7 @@
 // Everything the dashboard shows. The dashboard polls this every 3 seconds.
-import { load } from "@/lib/db";
+import { load, familyContact } from "@/lib/db";
 import { geminiEnabled } from "@/lib/gemini";
-import { phoneEnabled } from "@/lib/phone";
+import { phoneEnabled, twilioReady } from "@/lib/phone";
 import KinGuardRules from "@/lib/rules.cjs";
 import { factsFor } from "@/lib/pipeline";
 
@@ -18,14 +18,18 @@ export async function GET() {
     if (a.kind === "pay_attempt" || a.kind === "correlated") facts = facts.map(([k, v]) => [{ What: "Earlier warning", When: "Warned at" }[k] || k, v]);
     return { ...a, facts, excerpt: e?.excerpt || "" };
   });
+  const contact = familyContact(db);
   return Response.json({
     ...db,
+    contact,
     alerts,
     config: {
       gemini: geminiEnabled(),
-      email: Boolean(process.env.RESEND_API_KEY && (process.env.FAMILY_EMAIL || db.family[0]?.email)),
+      email: Boolean(process.env.RESEND_API_KEY && contact.email),
+      emailKey: Boolean(process.env.RESEND_API_KEY),
+      phoneKeys: twilioReady(),
       voice: Boolean(process.env.ELEVENLABS_API_KEY),
-      phone: phoneEnabled(),
+      phone: phoneEnabled(contact.phone),
     },
     guides: KinGuardRules.GUIDES,
     help: KinGuardRules.HELP,

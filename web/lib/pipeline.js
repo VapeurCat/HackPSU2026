@@ -1,6 +1,6 @@
 // The core: rules -> Gemini -> timeline -> alerts -> correlation -> family email.
 import KinGuardRules from "./rules.cjs";
-import { load, update, newId } from "./db.js";
+import { load, update, newId, familyContact } from "./db.js";
 import { analyzeWithGemini, explainCorrelation, geminiEnabled } from "./gemini.js";
 import { buildAlertEmail, sendFamilyEmail } from "./email.js";
 import { alertFamilyByPhone } from "./phone.js";
@@ -99,6 +99,12 @@ function mergeVerdicts(local, ai) {
   };
 }
 
+// The mobile number and which phone alerts are on, from Settings.
+function phoneSettings(db) {
+  const c = familyContact(db);
+  return { to: c.phone, sms: c.alerts.text, call: c.alerts.call };
+}
+
 const SOURCE_NAMES = { web: "web page", gmail: "email", paste: "checked message", bank: "bank" };
 
 function siteOf(url) {
@@ -168,8 +174,9 @@ const DECISION_TEXT = {
 
 /** earlier: the event is an earlier warning (pay attempt, payment), so label its facts that way. */
 async function notifyFamily(db, { heading, subject, explanation, cues, details = [], alertId, event, earlier = false, extraFacts = [], skipIds = [], guideKey, askKey }) {
-  const member = db.family[0];
-  const to = process.env.FAMILY_EMAIL || member?.email;
+  const contact = familyContact(db);
+  if (!contact.alerts.email) return { to: contact.email || "(email alerts off)", status: "off in Settings", ts: new Date().toISOString() };
+  const to = contact.email;
   const guide = KinGuardRules.GUIDES[guideKey] || null;
   const ask = (KinGuardRules.GUIDES[askKey || guideKey] || KinGuardRules.GUIDES.generic).ask;
   const fresh = load();
@@ -466,6 +473,7 @@ export async function checkCorrelation() {
     askKey: "payment",
   });
   const calls = await alertFamilyByPhone({
+    ...phoneSettings(db),
     text: `KinGuard: ${db.person.name} may be in a scam right now. $${tx.amount.toFixed(2)} at ${tx.merchant} right after a ${String(event.scamTypeName || "scam").toLowerCase()} warning${event.url ? ` on ${siteOf(event.url)}` : ""}. Call ${db.person.name} now. Details: ${process.env.DASHBOARD_URL || "http://localhost:3000"}`,
     say: `This is KinGuard. ${db.person.name} may be in a scam right now. A payment of ${Math.round(tx.amount)} dollars was made right after a scam warning. Please call ${db.person.name} now.`,
     alertId: alert.id,
@@ -555,6 +563,7 @@ export async function payAttempt({ url, title, kind, label }) {
     askKey: "payment",
   });
   const calls = await alertFamilyByPhone({
+    ...phoneSettings(db),
     text: `KinGuard: ${name} may be about to pay a scammer (${what}${url ? ` on ${siteOf(url)}` : ""}, ${mins} after a ${scamTypeName.toLowerCase()} warning). Call ${name} now. Details: ${process.env.DASHBOARD_URL || "http://localhost:3000"}`,
     say: `This is KinGuard. ${name} may be about to pay a scammer. ${name} is ${what}, ${mins} after a scam warning. Please call ${name} now.`,
     alertId: alert.id,

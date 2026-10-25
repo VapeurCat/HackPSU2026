@@ -67,7 +67,7 @@ export function buildAlertEmail({ elderName, heading, explanation, cues = [], de
 }
 
 export async function sendFamilyEmail({ to, subject, html, text, alertId }) {
-  let status = "demo mode (not sent)";
+  let status = "demo mode (not sent): add a Resend key to .env.local";
   const key = process.env.RESEND_API_KEY;
 
   if (key && to) {
@@ -88,10 +88,10 @@ export async function sendFamilyEmail({ to, subject, html, text, alertId }) {
       status = `failed: ${e.message}`;
     }
   } else if (key && !to) {
-    status = "not sent: set FAMILY_EMAIL in .env.local";
+    status = "not sent: add an email address in Settings";
   }
 
-  const entry = { id: newId("mail"), ts: new Date().toISOString(), to: to || "(no FAMILY_EMAIL set)", subject, text, status, alertId };
+  const entry = { id: newId("mail"), ts: new Date().toISOString(), to: to || "(no email address set)", subject, text, status, alertId };
   update((db) => {
     db.outbox.unshift(entry);
     db.outbox = db.outbox.slice(0, 50);

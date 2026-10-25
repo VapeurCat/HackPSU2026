@@ -2,8 +2,12 @@
 // (a scam warning followed by a payment). Without keys, they're recorded on the dashboard ("demo mode").
 import { update, newId } from "./db.js";
 
-export function phoneEnabled() {
-  return Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM && process.env.FAMILY_PHONE);
+export function twilioReady() {
+  return Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM);
+}
+
+export function phoneEnabled(phone) {
+  return twilioReady() && Boolean(phone);
 }
 
 function escapeXml(s) {
@@ -21,16 +25,18 @@ async function twilio(resource, params) {
   return res.ok ? "sent" : `failed (${res.status}): ${(await res.text()).slice(0, 200)}`;
 }
 
-/** Text the family member, then call them and read the alert aloud. */
-export async function alertFamilyByPhone({ text, say, alertId }) {
-  const to = process.env.FAMILY_PHONE;
+/**
+ * Text the family member, then call them and read the alert aloud.
+ * to: their mobile number (from Settings). sms / call: whether each is turned on in Settings.
+ */
+export async function alertFamilyByPhone({ text, say, alertId, to, sms = true, call = true }) {
   const from = process.env.TWILIO_FROM;
-  const enabled = phoneEnabled();
   const twiml = `<Response><Say>${escapeXml(say)}</Say><Pause length="1"/><Say>Again: ${escapeXml(say)}</Say></Response>`;
 
   const send = async (channel, fn) => {
-    let status = "demo mode (not sent)";
-    if (enabled) {
+    let status = "demo mode (not sent): add Twilio keys to .env.local";
+    if (!to) status = "not sent: add a mobile number in Settings";
+    else if (twilioReady()) {
       try {
         status = await fn();
       } catch (e) {
@@ -41,7 +47,7 @@ export async function alertFamilyByPhone({ text, say, alertId }) {
       id: newId(channel),
       ts: new Date().toISOString(),
       channel,
-      to: to || "(no FAMILY_PHONE set)",
+      to: to || "(no mobile number set)",
       subject: channel === "sms" ? `📱 Text: ${text}` : `📞 Phone call: "${say}"`,
       text: channel === "sms" ? text : say,
       status,
@@ -55,8 +61,8 @@ export async function alertFamilyByPhone({ text, say, alertId }) {
     return entry;
   };
 
-  return [
-    await send("sms", () => twilio("Messages", { To: to, From: from, Body: text })),
-    await send("call", () => twilio("Calls", { To: to, From: from, Twiml: twiml })),
-  ];
+  const sent = [];
+  if (sms) sent.push(await send("sms", () => twilio("Messages", { To: to, From: from, Body: text })));
+  if (call) sent.push(await send("call", () => twilio("Calls", { To: to, From: from, Twiml: twiml })));
+  return sent;
 }

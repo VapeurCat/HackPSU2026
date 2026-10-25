@@ -76,7 +76,10 @@ function StatusBand({ data, refresh }) {
           <span className="brand-name">
             <Shield /> KinGuard
           </span>
-          <DevMenu data={data} refresh={refresh} />
+          <div className="header-tools">
+            <SettingsMenu data={data} refresh={refresh} />
+            <DevMenu data={data} refresh={refresh} />
+          </div>
         </div>
         <h1 className="status-line" aria-live="polite">
           {line}
@@ -378,6 +381,185 @@ function Outbox({ data }) {
         ))}
       </div>
     </section>
+  );
+}
+
+// Settings: who KinGuard protects, the trusted contact, and how they're alerted.
+function SettingsMenu({ data, refresh }) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [tests, setTests] = useState(null);
+
+  const start = () => {
+    const c = data.family[0] || {};
+    setForm({
+      personName: data.person.name || "",
+      name: c.name || "",
+      relation: c.relation || "",
+      email: c.email || "",
+      phone: c.phone || "",
+      alerts: { email: true, text: true, call: true, ...(c.alerts || {}) },
+    });
+    setErrors({});
+    setSaved(false);
+    setTests(null);
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  const set = (k, v) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    setSaved(false);
+  };
+  const setAlert = (k, v) => {
+    setForm((f) => ({ ...f, alerts: { ...f.alerts, [k]: v } }));
+    setSaved(false);
+  };
+
+  const save = async (e) => {
+    e?.preventDefault();
+    setBusy(true);
+    const res = await fetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        personName: form.personName,
+        contact: { name: form.name, relation: form.relation, email: form.email, phone: form.phone, alerts: form.alerts },
+      }),
+    });
+    const out = await res.json();
+    setBusy(false);
+    if (!res.ok) {
+      setErrors(out.errors || {});
+      return false;
+    }
+    setErrors({});
+    setForm((f) => ({ ...f, phone: out.contact.phone }));
+    setSaved(true);
+    await refresh();
+    return true;
+  };
+
+  const test = async () => {
+    if (!(await save())) return;
+    setBusy(true);
+    setTests(null);
+    const out = await post("/api/settings/test");
+    setTests(out.results || []);
+    setBusy(false);
+    refresh();
+  };
+
+  const field = (k, label, props = {}) => (
+    <label className="set-field">
+      <span>{label}</span>
+      <input value={form[k]} onChange={(e) => set(k, e.target.value)} aria-invalid={Boolean(errors[k])} {...props} />
+      {errors[k] && <em className="set-error">{errors[k]}</em>}
+    </label>
+  );
+
+  return (
+    <>
+      <button className="dev-toggle" onClick={start} aria-haspopup="dialog">
+        <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+          <circle cx="10" cy="10" r="3" fill="none" stroke="currentColor" strokeWidth="2" />
+          <path
+            d="M10 1.5v3M10 15.5v3M1.5 10h3M15.5 10h3M4 4l2.1 2.1M13.9 13.9 16 16M4 16l2.1-2.1M13.9 6.1 16 4"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </svg>
+        Settings
+      </button>
+      {open && form && (
+        <div className="set-scrim" onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}>
+          <form className="set-panel" role="dialog" aria-modal="true" aria-labelledby="set-h" onSubmit={save}>
+            <div className="set-head">
+              <h2 id="set-h">Settings</h2>
+              <button type="button" className="set-close" aria-label="Close settings" onClick={() => setOpen(false)}>
+                ×
+              </button>
+            </div>
+
+            <fieldset>
+              <legend>Who KinGuard protects</legend>
+              {field("personName", "Name", { autoComplete: "off", autoFocus: true })}
+            </fieldset>
+
+            <fieldset>
+              <legend>Trusted contact</legend>
+              <p className="set-note">The person KinGuard alerts when something looks like a scam.</p>
+              <div className="set-row">
+                {field("name", "Name", { autoComplete: "off" })}
+                {field("relation", "Relationship", { placeholder: "daughter, son, friend…", autoComplete: "off" })}
+              </div>
+              {field("email", "Email", { type: "email", placeholder: "name@example.com", autoComplete: "off" })}
+              {field("phone", "Mobile phone", { type: "tel", placeholder: "(814) 555-0123", autoComplete: "off" })}
+            </fieldset>
+
+            <fieldset>
+              <legend>How to alert them</legend>
+              <label className="set-check">
+                <input type="checkbox" checked={form.alerts.email} onChange={(e) => setAlert("email", e.target.checked)} />
+                <span>
+                  <strong>Email</strong> for every likely scam
+                  <small>{data.config.emailKey ? "Email sending is set up." : "Demo mode: emails are saved on the dashboard until a Resend key is added."}</small>
+                </span>
+              </label>
+              <label className="set-check">
+                <input type="checkbox" checked={form.alerts.text} onChange={(e) => setAlert("text", e.target.checked)} />
+                <span>
+                  <strong>Text message</strong> for the most urgent alerts
+                  <small>{data.config.phoneKeys ? "Texts and calls are set up." : "Demo mode: texts are saved on the dashboard until Twilio keys are added."}</small>
+                </span>
+              </label>
+              <label className="set-check">
+                <input type="checkbox" checked={form.alerts.call} onChange={(e) => setAlert("call", e.target.checked)} />
+                <span>
+                  <strong>Phone call</strong> for the most urgent alerts
+                  <small>The most urgent alerts: about to pay, or paid, right after a scam warning.</small>
+                </span>
+              </label>
+            </fieldset>
+
+            {tests && (
+              <div className="set-tests" role="status">
+                <strong>Test results</strong>
+                <ul>
+                  {tests.map((t, i) => (
+                    <li key={i} data-ok={String(t.status).startsWith("sent")}>
+                      <span>{t.channel}</span> {t.to && `to ${t.to}`}: {t.status}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="set-actions">
+              <button type="button" className="btn" onClick={test} disabled={busy}>
+                Send a test alert
+              </button>
+              <span className="set-saved" role="status">
+                {saved && !busy ? "✓ Saved" : ""}
+              </span>
+              <button type="submit" className="btn btn-primary" disabled={busy}>
+                {busy ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </>
   );
 }
 

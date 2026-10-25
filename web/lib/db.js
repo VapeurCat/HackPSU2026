@@ -24,6 +24,8 @@ function seed() {
         name: family,
         relation: "daughter",
         email: process.env.FAMILY_EMAIL || "",
+        phone: process.env.FAMILY_PHONE || "",
+        alerts: { email: true, text: true, call: true },
         role: "owner",
       },
     ],
@@ -65,10 +67,28 @@ export function update(fn) {
   return result;
 }
 
+// Clears the demo history but keeps the people and contact details set in Settings.
 export function reset() {
   const fresh = seed();
+  try {
+    const old = JSON.parse(fs.readFileSync(FILE, "utf8"));
+    if (old.person) fresh.person = old.person;
+    if (old.family?.length) fresh.family = old.family;
+  } catch {}
   save(fresh);
   return fresh;
+}
+
+/** The trusted contact's details from Settings, falling back to .env.local. */
+export function familyContact(db) {
+  const m = db.family?.[0] || {};
+  return {
+    name: m.name || "your family",
+    relation: m.relation || "",
+    email: m.email || process.env.FAMILY_EMAIL || "",
+    phone: m.phone || process.env.FAMILY_PHONE || "",
+    alerts: { email: true, text: true, call: true, ...(m.alerts || {}) },
+  };
 }
 
 export function newId(prefix) {
