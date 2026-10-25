@@ -200,7 +200,6 @@ function StatusBand({ data, refresh }) {
             <Shield /> KinGuard
           </span>
           <div className="header-tools">
-            <TextSizeToggle />
             <SettingsMenu data={data} refresh={refresh} />
             <DevMenu data={data} refresh={refresh} />
           </div>
@@ -602,31 +601,6 @@ function Timeline({ data, onDeleteEvent }) {
 }
 
 // Larger text for easier reading, remembered on this computer.
-function TextSizeToggle() {
-  const [large, setLarge] = useState(false);
-  useEffect(() => {
-    try {
-      const on = localStorage.getItem("kg-large-text") === "1";
-      setLarge(on);
-      document.documentElement.dataset.size = on ? "large" : "";
-    } catch {}
-  }, []);
-  const toggle = () => {
-    const on = !large;
-    setLarge(on);
-    document.documentElement.dataset.size = on ? "large" : "";
-    try {
-      localStorage.setItem("kg-large-text", on ? "1" : "0");
-    } catch {}
-  };
-  return (
-    <button type="button" className="dev-toggle" aria-pressed={large} onClick={toggle} title="Make the text bigger">
-      <Icon name="text" size={16} />
-      {large ? "Normal text" : "Larger text"}
-    </button>
-  );
-}
-
 // Why KinGuard exists and how it helps. Figures are from the FBI's 2025 IC3 Annual Report.
 const IC3_REPORT = "https://www.ic3.gov/AnnualReport/Reports/2025_IC3Report.pdf";
 

@@ -902,7 +902,8 @@ main.single {
   flex: none;
   vertical-align: -3px;
 }
-html[data-size="large"] body {
+/* Larger text for everyone: easier to read for older eyes. */
+html body {
   zoom: 1.18;
 }
 
