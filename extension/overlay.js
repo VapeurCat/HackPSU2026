@@ -16,7 +16,7 @@ const KinGuardUI = (() => {
       display: flex; align-items: center; justify-content: center; padding: 24px;
       font-family: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif; color: #15301f; }
     .card { background: #fff; border-radius: 18px; max-width: 640px; width: 100%; max-height: 92vh; overflow: auto;
-      padding: 32px 34px 26px; box-shadow: 0 20px 60px rgba(0,0,0,.35); border-top: 10px solid #b42318; }
+      padding: 32px 34px 26px; box-shadow: 0 20px 60px rgba(0,0,0,.35); border-top: 10px solid #b42318; position: relative; }
     .card.medium { border-top-color: #c98a12; }
     .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; color: #4f6b56; margin-bottom: 14px; }
     h1 { font-size: 34px; line-height: 1.15; margin: 0 0 14px; }
@@ -42,7 +42,12 @@ const KinGuardUI = (() => {
       animation: kg-pop .4s ease-out, kg-glow 1.2s ease-in-out .4s 3, kg-nudge .45s ease-in-out .5s 2; }
     .banner .icon { flex: none; width: 52px; height: 52px; border-radius: 50%; background: #b7791f; color: #fff;
       display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 700; line-height: 1; }
-    .banner .body { flex: 1; min-width: 0; }
+    .banner .body { flex: 1; min-width: 0; padding-right: 44px; }
+    /* Read aloud: a small speaker button in the top-right corner */
+    .speak-corner { position: absolute; top: 14px; right: 14px; width: 46px; height: 46px; padding: 0; border-radius: 50%;
+      border: 2px solid #15301f; background: #fff; color: #15301f; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .speak-corner:hover { background: #f0f5ec; }
+    .card .brand { padding-right: 52px; }
     .banner h2 { margin: 0 0 6px; font-size: 26px; line-height: 1.2; }
     .banner p { margin: 0 0 12px; font-size: 19px; line-height: 1.45; }
     .banner .links { margin: 0 0 14px; font-size: 17px; }
@@ -166,6 +171,7 @@ const KinGuardUI = (() => {
     root.innerHTML = `<style>${CSS}</style>
       <div class="scrim" role="alertdialog" aria-modal="true" aria-labelledby="kg-h" aria-describedby="kg-say">
         <div class="card">
+          <button class="speak-corner" data-act="speak" aria-label="Read this to me" title="Read this to me">${icon("speak", 24)}</button>
           <div class="brand">${SHIELD} KinGuard</div>
           <h1 id="kg-h">Stop. This looks like a scam.</h1>
           <p class="say" id="kg-say">${esc(v.explanationForElder)}${realSiteLink(v)}</p>
@@ -179,7 +185,6 @@ const KinGuardUI = (() => {
           ${guideHTML(v.guideKey)}
           <div class="row">
             <button class="primary" data-act="close">Close this page</button>
-            <button class="secondary" data-act="speak">${icon("speak")} Read this to me</button>
             <button class="trust" data-act="trust">I trust this page</button>
           </div>
           <div class="family ${pending ? "pending" : ""}">
@@ -208,6 +213,7 @@ const KinGuardUI = (() => {
     const official = v.lookalike?.official;
     root.innerHTML = `<style>${CSS}</style>
       <div class="banner" role="alert" aria-labelledby="kg-bh" aria-describedby="kg-bp">
+        <button class="speak-corner" data-act="speak" aria-label="Read this to me" title="Read this to me">${icon("speak", 24)}</button>
         <div class="icon" aria-hidden="true">!</div>
         <div class="body">
           <div class="brand-line">KinGuard</div>
@@ -219,7 +225,6 @@ const KinGuardUI = (() => {
           </div>
           <div class="row">
             <button class="ok" data-act="ok">OK, I'll be careful</button>
-            <button class="secondary" data-act="speak">${icon("speak")} Read this to me</button>
             ${official ? "" : `<button class="secondary" data-act="trustsite" title="Stop showing yellow notices on ${esc(pageHost)}">Trust this site</button>`}
           </div>
         </div>
@@ -256,6 +261,7 @@ const KinGuardUI = (() => {
     root.innerHTML = `<style>${CSS}</style>
       <div class="scrim" role="alertdialog" aria-modal="true" aria-labelledby="kg-h" aria-describedby="kg-say">
         <div class="card">
+          <button class="speak-corner" data-act="speak" aria-label="Read this to me" title="Read this to me">${icon("speak", 24)}</button>
           <div class="brand">${SHIELD} KinGuard</div>
           <h1 id="kg-h">Wait. Before you pay…</h1>
           <p class="say" id="kg-say">${esc(say)}</p>
@@ -266,7 +272,6 @@ const KinGuardUI = (() => {
           ${guideHTML(v.guideKey || "payment")}
           <div class="row">
             <button class="primary" data-act="close">Close this page</button>
-            <button class="secondary" data-act="speak">${icon("speak")} Read this to me</button>
             <button class="trust" data-act="continue">I'm paying for something else</button>
           </div>
           <div class="family">
