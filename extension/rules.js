@@ -150,6 +150,10 @@ const KinGuardRules = (() => {
   const RUN_COMMAND = /((press|hold)\s+(the\s+)?(windows|win|⊞)(\s*key)?\s*\+\s*r\b|\b(ctrl|control)\s*\+\s*v\b[\s\S]{0,120}\b(enter|run)\b|\b(powershell|cmd\.exe|mshta|run dialog)\b)/i;
   const HUMAN_CHECK = /\b(captcha|i('m| am) not a robot|(prove|verify|confirm) (that )?you('re| are) (a )?human|human verification)\b/i;
   const FAKE_CHECK = /\bdeposit (this|the) check\b[\s\S]{0,250}\b(vendor|send|buy|purchase|return|wire|zelle|gift)\b/i;
+  // Prank pages say so themselves ("this is not a real virus", "prank someone").
+  const PRANK = /\b(prank(s|ed|ing)?|this is not a real (virus|warning|alert)|not a real virus|just a joke|joke (site|website|page)|for entertainment (purposes )?only|fake virus (simulator|screen|prank))\b/i;
+  // A "prank" page that asks for any of these is treated as a real scam.
+  const ASKS_FOR_SOMETHING = ["callNumber", "remoteAccess", "codeRequest", "paymentApp", "accountPhish", "lookalike", "brandSpoof", "untraceable", "feeToWithdraw", "overpayment", "upfrontFee", "paymentRedirect"];
   const FEE_FOR_MONEY = /\b(prize|won|winner|inheritance|inherited|estate|grant|loan|scholarship|refund|settlement|payout|earnings|commission|reward|forgiveness)\b/i;
 
   // Crypto ATM: no real business, agency or bank asks for this. Always high risk.
@@ -198,6 +202,8 @@ const KinGuardRules = (() => {
       "Give to charities you already know, through their own website. Be wary of pressure to donate right now, especially by gift card, crypto or wire.",
     shopping:
       "Be careful paying deposits for things you haven't seen, and for prices that seem too good to be true. Fake stores, rentals and sellers are common.",
+    prank:
+      "This looks like a prank page that imitates a scary warning. It can't harm your computer, but real scams look just like this, so never call a number or pay because a page tells you to.",
     typosquat:
       "This website's address looks like a well-known company's, but it isn't theirs. Scammers make lookalike sites to steal passwords and card numbers.",
     generic:
@@ -227,6 +233,7 @@ const KinGuardRules = (() => {
     charity: "Fake charity appeal",
     shopping: "Fake store, rental or seller",
     typosquat: "Lookalike website address",
+    prank: "Prank or fake warning page",
     generic: "Possible scam",
     suspicious: "Suspicious content",
   };
@@ -647,10 +654,18 @@ const KinGuardRules = (() => {
       const r = scoreSection(section, opts, look, spoof);
       if (!best || RANK[r.risk] > RANK[best.risk] || (r.risk === best.risk && r.score > best.score)) best = r;
     }
-    const { t, cues, score, hardRules, risk } = best;
+    const { t, cues, score } = best;
+    let { hardRules, risk } = best;
+    // A page that says it's a prank and asks for nothing gets the amber notice, not the red one.
+    const prank = risk !== "low" && PRANK.test(full) && !has(cues, ASKS_FOR_SOMETHING);
+    if (prank) {
+      risk = "medium";
+      hardRules = [];
+    }
 
     let scamType = null;
-    if (risk !== "low") {
+    if (prank) scamType = "prank";
+    else if (risk !== "low") {
       scamType = guessType(cues, hardRules, t);
       if (risk === "medium" && scamType === "generic") scamType = guessMedium(cues);
     }
@@ -660,6 +675,7 @@ const KinGuardRules = (() => {
     }
 
     return {
+      prank,
       lookalike: look,
       risk,
       score,
@@ -668,7 +684,7 @@ const KinGuardRules = (() => {
       scamType,
       stage: ["investment", "romance", "platform_switch"].includes(scamType) ? pigButcheringStage(cues, t) : null,
       scamTypeName: scamType ? TYPE_NAMES[scamType] : null,
-      guideKey: scamType ? (GUIDES[scamType] ? scamType : "generic") : null,
+      guideKey: scamType ? (GUIDES[scamType] ? scamType : scamType === "prank" ? "tech_support" : "generic") : null,
       explanationForElder,
       explanationForFamily: scamType
         ? `${TYPE_NAMES[scamType]}. Warning signs: ${cues.map((c) => c.label.toLowerCase()).join(", ")}.`

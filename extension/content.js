@@ -73,7 +73,7 @@
     // A high-risk page is warned about right away, then upgraded with the AI's answer.
     // A mildly suspicious page waits for the AI, which can clear it, so ordinary pages don't flash a warning.
     // A lookalike address is a fact, not a guess, so its banner shows right away too.
-    if (local.risk === "high" || look) KinGuardUI.show(local, { pending: true });
+    if (local.risk === "high" || look || local.prank) KinGuardUI.show(local, { pending: true });
 
     chrome.runtime.sendMessage({ type: "ANALYZE", url: pageUrl, title: document.title, text, sensitiveForm }, (verdict) => {
       if (chrome.runtime.lastError || !verdict || verdict.error) {

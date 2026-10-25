@@ -59,6 +59,8 @@ const LOCAL_TO_AI = {
 };
 
 function mergeVerdicts(local, ai) {
+  // A self-declared prank page that asks for nothing keeps its amber notice, whatever the AI says.
+  if (local.prank) return { ...local, aiUsed: Boolean(ai) };
   if (!ai) return { ...local, aiUsed: false, stage: local.stage || null, guideKey: local.guideKey || null };
 
   // AI can raise risk. It can clear a mild (medium) warning that no hard rule triggered,

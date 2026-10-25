@@ -44,6 +44,7 @@ const SCAMS = [
   // Fake ransomware / scare screens
   ["high", "", "Bad news, your files have been encrypted! You can access them again if you pay a ransom. Hurry! Your files will be permanently deleted in one hour."],
   ["high", "", "Your computer has been locked. Call Microsoft Support at 1-888-555-0123 to unlock it."],
+  ["high", "", "This is just a prank! Your files have been encrypted. Hurry, call Support at 1-888-555-0123 within one hour to unlock them."],
   // Files, links and attachments
   ["medium", "", "Please open the attached invoice and confirm payment within 24 hours."],
   ["medium", "Docs Share <share@docs-share-secure.com>", "Someone shared a confidential file with you. Sign in to view the document."],
