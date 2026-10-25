@@ -277,6 +277,11 @@ section h2 {
 .alert[data-expanded="false"] {
   padding-top: 14px;
   padding-bottom: 14px;
+  cursor: pointer;
+}
+.alert[data-expanded="false"]:hover {
+  border-color: var(--muted);
+  box-shadow: 0 2px 8px rgba(22, 48, 42, 0.08);
 }
 .alert-summary {
   margin: 4px 0 0;

@@ -178,7 +178,14 @@ function AlertCard({ alert, data, onStatus, startOpen = false }) {
   }[alert.status];
 
   return (
-    <article className="alert" data-kind={alert.kind} data-status={alert.status} data-expanded={expanded}>
+    // A collapsed card opens when clicked anywhere; the title button keeps it keyboard-accessible.
+    <article
+      className="alert"
+      data-kind={alert.kind}
+      data-status={alert.status}
+      data-expanded={expanded}
+      onClick={expanded ? undefined : () => setExpanded(true)}
+    >
       <h3 className="alert-heading">
         <button type="button" className="alert-toggle" aria-expanded={expanded} aria-controls={bodyId} onClick={() => setExpanded((x) => !x)}>
           <span className="alert-title">{alert.kind === "correlated" ? `🚨 ${alert.title}` : alert.title}</span>
