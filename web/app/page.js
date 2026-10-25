@@ -108,18 +108,15 @@ function Sea() {
   return (
     <>
       {/* Each wave repeats every 300 units, so sliding it 1200 to the left loops without a seam. */}
-      <svg className="band-sea" viewBox="0 0 1200 96" preserveAspectRatio="none" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round">
+      <svg className="band-sea" viewBox="0 0 1200 72" preserveAspectRatio="none" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round">
         <g className="wave wave-1">
           <path d={wavePath(30, 10)} strokeWidth="1.3" opacity="0.75" vectorEffect="non-scaling-stroke" />
         </g>
         <g className="wave wave-2">
           <path d={wavePath(54, 8)} strokeWidth="1.2" opacity="0.55" vectorEffect="non-scaling-stroke" />
         </g>
-        <g className="wave wave-3">
-          <path d={wavePath(76, 6)} strokeWidth="1.1" opacity="0.38" vectorEffect="non-scaling-stroke" />
-        </g>
       </svg>
-      {/* The shoreline: shallow water, then sand that is darker where it's wet, with broken foam lapping at the edge. */}
+      {/* The shoreline: shallow water, then sand that is darker where it's wet. */}
       <svg className="band-shore" viewBox="0 0 1200 60" preserveAspectRatio="none" aria-hidden="true">
         <defs>
           <linearGradient id="kg-sand" x1="0" y1="0" x2="0" y2="1">
@@ -130,12 +127,6 @@ function Sea() {
         </defs>
         <path className="shore-shallow" d={`${wavePath(10, 4)} L 2400 60 L 0 60 Z`} />
         <path d={`${wavePath(32, 5)} L 2400 60 L 0 60 Z`} fill="url(#kg-sand)" />
-        <g className="shore-foam shore-foam-back">
-          <path d={wavePath(27, 4)} fill="none" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="70 10 30 6 110 14 45 8" vectorEffect="non-scaling-stroke" />
-        </g>
-        <g className="shore-foam shore-foam-front">
-          <path d={wavePath(31, 5)} fill="none" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="130 6 60 4 90 10 40 5" vectorEffect="non-scaling-stroke" />
-        </g>
       </svg>
       {/* A small sailboat crossing the far wave, very slowly. */}
       <svg className="band-boat" width="34" height="30" viewBox="0 0 34 30" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round">
@@ -147,10 +138,10 @@ function Sea() {
       <svg className="band-light" width="230" height="230" viewBox="0 0 230 230" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
         <circle className="band-sun" cx="78" cy="78" r="30" strokeWidth="1.2" />
         <g className="sun-glints" strokeWidth="1.6">
-          <path d="M60 170 H 96" />
-          <path d="M66 182 H 90" />
-          <path d="M56 194 H 74 M82 194 H 100" />
-          <path d="M70 206 H 86" />
+          <path d="M60 154 H 96" />
+          <path d="M66 164 H 90" />
+          <path d="M56 174 H 74 M82 174 H 100" />
+          <path d="M70 184 H 86" />
         </g>
         <rect className="band-lamp" x="181" y="42" width="14" height="12" stroke="none" />
         <path d="M30 34 q 6 -6 12 0 q 6 -6 12 0" strokeWidth="1.2" opacity="0.7" />
@@ -159,7 +150,7 @@ function Sea() {
           <path d="M184 44 L 70 14" opacity="0.55" />
           <path d="M184 48 L 70 82" opacity="0.55" />
         </g>
-        <g strokeWidth="1.5">
+        <g className="lighthouse" strokeWidth="2.4">
           <path d="M174 150 L 180 56 L 196 56 L 202 150 Z" />
           <path d="M178 56 L 198 56 L 195 40 L 181 40 Z" />
           <path d="M183 40 L 188 30 L 193 40" />
