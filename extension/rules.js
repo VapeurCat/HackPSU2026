@@ -11,7 +11,7 @@ const KinGuardRules = (() => {
     urgency: {
       w: 2,
       label: "Rushing you",
-      re: /\b(urgent(ly)?|immediately|right away|act now|within \d+\s*(minutes?|hours?)|today only|expires? (today|tonight)|final (notice|warning)|last chance|unless you (sign|log|verify|confirm|act|respond|pay|update|call)|(for a )?limited time( only)?|respond (quickly|promptly|asap)|urgent (response|reply|attention))\b/i,
+      re: /\b(urgent(ly)?|immediately|right away|act now|within \d+\s*(minutes?|hours?)|today only|expires? (today|tonight)|final (notice|warning)|last chance|unless you (sign|log|verify|confirm|act|respond|pay|update|call)|(for a )?limited time( only)?|respond (quickly|promptly|asap)|urgent (response|reply|attention)|hurry|you have (only )?(one|two|\d+) (hours?|minutes?|days?) (left|to)|time (is )?running out)\b/i,
     },
     authority: {
       w: 2,
@@ -82,6 +82,11 @@ const KinGuardRules = (() => {
       w: 3,
       label: "Threatening to expose you",
       re: /\b(recorded you (while|watching|doing)|(hacked|accessed|took over) your (webcam|camera|device|computer)|(intimate|embarrassing|compromising|explicit) (video|videos|photos?|pictures)|send (it|the video|them) to (all )?(of )?your (contacts|friends|family)|i (know|have) your password)\b/i,
+    },
+    scareScreen: {
+      w: 3,
+      label: "Fake \"your files are locked\" scare screen",
+      re: /\b((files|data|computer|device|photos)( and [a-z]+)? (have|has) been (encrypted|locked|hijacked)|pay (a |the )?ransome?|ransom(ware)? (note|payment|demand)|decrypt(or|ion key|ion software)|(files|data) will be (permanently )?(deleted|destroyed|lost|erased)|your (computer|device|pc) (is|has been) (locked|blocked|hijacked))\b/i,
     },
     // Weights stay low so one phrase on a normal page or email isn't enough to warn.
     accountPhish: {
@@ -546,6 +551,7 @@ const KinGuardRules = (() => {
     guaranteed_returns: "Guaranteed returns on crypto or trading",
     romance_money: "Affection plus an urgent money request",
     prize_claim: "A surprise prize with pressure to claim it quickly",
+    scare_screen: "Fake \"your files are locked\" screen with pressure to pay or call",
   };
 
   // Match a scam type name (including the AI's free-text names) to a guide.
@@ -598,7 +604,7 @@ const KinGuardRules = (() => {
     if (FAMILY_EMERGENCY.test(text)) return "family_emergency";
     if (rule("fake_check") || n("jobOffer")) return "job_scam";
     if (n("fakeCharge")) return "fake_charge";
-    if (n("remoteAccess") || (COMPUTER_THREAT.test(text) && (n("callNumber") || n("authority")))) return "tech_support";
+    if (n("scareScreen") || n("remoteAccess") || (COMPUTER_THREAT.test(text) && (n("callNumber") || n("authority")))) return "tech_support";
     if (n("legalThreat")) return "legal_threat";
     if (n("accountPhish") || n("codeRequest") || n("brandSpoof")) return "phishing";
     if (n("feeToWithdraw") || INVEST.test(text)) return "investment";
@@ -720,6 +726,7 @@ const KinGuardRules = (() => {
       hardRules.push({ rule: "fee_for_money" });
     }
     if (FAKE_CHECK.test(t)) hardRules.push({ rule: "fake_check" });
+    if (has(cues, ["scareScreen"]) && has(cues, ["urgency", "callNumber", "untraceable", "secrecy"])) hardRules.push({ rule: "scare_screen" });
     if (PRIZE.test(t) && has(cues, ["urgency"]) && /\b(claim|contact|visit|portal|payment officer|agent|click)\b/i.test(t)) hardRules.push({ rule: "prize_claim" });
     if (/\b(guaranteed (returns?|profits?)|double your money)\b/i.test(t) && /\b(crypto|bitcoin|trading|forex)\b/i.test(t)) hardRules.push({ rule: "guaranteed_returns" });
     if (has(cues, ["paymentRedirect"]) && has(cues, ["urgency", "secrecy", "bossRequest"])) hardRules.push({ rule: "payment_redirect_pressure" });

@@ -41,6 +41,9 @@ const SCAMS = [
   ["high", "Connor DelRosso <someone@gmail.com>", "CONGRATULATIONS, YOU HAVE WON!!! Dear Lucky Winner, your email address has been selected as one of our LUCKY WINNERS. You have won the sum of $850,000.00 USD and are required to contact our payment officer immediately. To claim your prize, visit our official claim portal. This prize is valid for limited time only. We await your urgent response."],
   ["medium", "", "Help hurricane victims now. Donate today using this urgent payment link and a sponsor will double your donation."],
   ["high", "", "Grandpa it's me, I'm in jail after a car accident. I need money immediately for bail. Please don't tell anyone."],
+  // Fake ransomware / scare screens
+  ["high", "", "Bad news, your files have been encrypted! You can access them again if you pay a ransom. Hurry! Your files will be permanently deleted in one hour."],
+  ["high", "", "Your computer has been locked. Call Microsoft Support at 1-888-555-0123 to unlock it."],
   // Files, links and attachments
   ["medium", "", "Please open the attached invoice and confirm payment within 24 hours."],
   ["medium", "Docs Share <share@docs-share-secure.com>", "Someone shared a confidential file with you. Sign in to view the document."],
