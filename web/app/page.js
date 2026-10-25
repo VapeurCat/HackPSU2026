@@ -909,7 +909,8 @@ export default function Dashboard() {
   const [view, setView] = useState("alerts");
   useEffect(() => {
     try {
-      if (sessionStorage.getItem("kg-view") === "history") setView("history");
+      const saved = sessionStorage.getItem("kg-view");
+      if (saved === "history" || saved === "about") setView(saved);
     } catch {}
   }, []);
   const show = (v) => {
@@ -933,13 +934,19 @@ export default function Dashboard() {
         <button type="button" aria-current={view === "history" ? "page" : undefined} onClick={() => show("history")}>
           History
         </button>
+        <button type="button" aria-current={view === "about" ? "page" : undefined} onClick={() => show("about")}>
+          About
+        </button>
       </nav>
       {view === "alerts" ? (
         <main className="single">
           <SetupChecklist data={data} />
           <TodayTiles data={data} />
-          <About />
           <Alerts data={data} onStatus={setStatus} onDelete={deleteAlert} freshIds={freshIds} />
+        </main>
+      ) : view === "about" ? (
+        <main className="single">
+          <About />
         </main>
       ) : (
         <main>
