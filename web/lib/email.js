@@ -66,6 +66,21 @@ export function buildAlertEmail({ elderName, heading, explanation, cues = [], de
   return { html, text };
 }
 
+// Resend's common errors, in words that say what to fix.
+function explainResendError(code, body) {
+  let message = body;
+  try {
+    message = JSON.parse(body).message || body;
+  } catch {}
+  if (code === 401 || /api key/i.test(message)) return "failed: the Resend API key is wrong. Copy it again into RESEND_API_KEY in .env.local and restart.";
+  if (/testing emails|own email address|verify a domain/i.test(message)) {
+    return "failed: Resend's free test sender only delivers to the email you signed up to Resend with. Put that address in Settings, or verify a domain in Resend.";
+  }
+  if (code === 422 && /from/i.test(message)) return "failed: RESEND_FROM isn't a sender Resend accepts. Remove it from .env.local to use the test sender.";
+  if (code === 429) return "failed: Resend's sending limit was reached. Wait a minute and try again.";
+  return `failed (${code}): ${String(message).slice(0, 200)}`;
+}
+
 export async function sendFamilyEmail({ to, subject, html, text, alertId }) {
   let status = "demo mode (not sent): add a Resend key to .env.local";
   const key = process.env.RESEND_API_KEY;
@@ -83,9 +98,9 @@ export async function sendFamilyEmail({ to, subject, html, text, alertId }) {
           text,
         }),
       });
-      status = res.ok ? "sent" : `failed (${res.status}): ${(await res.text()).slice(0, 200)}`;
+      status = res.ok ? "sent" : explainResendError(res.status, await res.text());
     } catch (e) {
-      status = `failed: ${e.message}`;
+      status = `failed: couldn't reach Resend (${e.message}). Check the internet connection.`;
     }
   } else if (key && !to) {
     status = "not sent: add an email address in Settings";

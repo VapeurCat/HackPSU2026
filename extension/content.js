@@ -54,6 +54,7 @@
       sentText = text;
       if (payChecked) return; // once per page, so choosing "continue" isn't asked again
       payChecked = true;
+      if (look) KinGuardUI.show(local); // a lookalike payment page still gets its notice (the pause screen replaces it if needed)
       chrome.runtime.sendMessage({ type: "PAY_CHECK", url: location.href, title: document.title, ...pay }, (v) => {
         if (chrome.runtime.lastError || !v || v.error || !v.pause) return;
         KinGuardUI.pause(v);

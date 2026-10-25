@@ -29,12 +29,29 @@ const KinGuardUI = (() => {
     button:focus-visible { outline: 3px solid #1b5fd1; outline-offset: 3px; }
     .family { margin-top: 18px; padding-top: 14px; border-top: 1px solid #c9d6d0; font-size: 17px; color: #23784f; font-weight: 700; }
     .family.pending { color: #55706a; font-weight: 400; }
-    .banner { position: fixed; left: 16px; right: 16px; top: 16px; z-index: 2147483647; background: #fbf0dc; color: #16302a;
-      border: 2px solid #c98a12; border-radius: 12px; padding: 14px 18px; display: flex; gap: 14px; align-items: center;
-      font-family: "Atkinson Hyperlegible", system-ui, sans-serif; font-size: 18px; box-shadow: 0 8px 30px rgba(0,0,0,.2); }
-    .banner p { margin: 0; flex: 1; }
-    .banner button { font-size: 16px; padding: 8px 14px; }
-    .banner a { color: #16302a; font-weight: 700; }
+    /* "Be careful" notice: big, bright and centered, but it doesn't block the page. */
+    .banner { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); width: min(780px, calc(100vw - 32px));
+      z-index: 2147483647; background: #fff3cd; color: #16302a; border: 3px solid #b7791f; border-left-width: 14px;
+      border-radius: 16px; padding: 18px 22px; display: flex; gap: 18px; align-items: flex-start;
+      font-family: "Atkinson Hyperlegible", system-ui, sans-serif; box-shadow: 0 14px 40px rgba(0,0,0,.35), 0 0 0 4px rgba(183,121,31,.25);
+      animation: kg-pop .4s ease-out, kg-glow 1.2s ease-in-out .4s 3, kg-nudge .45s ease-in-out .5s 2; }
+    .banner .icon { flex: none; width: 52px; height: 52px; border-radius: 50%; background: #b7791f; color: #fff;
+      display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 700; line-height: 1; }
+    .banner .body { flex: 1; min-width: 0; }
+    .banner h2 { margin: 0 0 6px; font-size: 26px; line-height: 1.2; }
+    .banner p { margin: 0 0 12px; font-size: 19px; line-height: 1.45; }
+    .banner .links { margin: 0 0 14px; font-size: 17px; }
+    .banner a { color: #1b5fd1; font-weight: 700; margin-right: 14px; }
+    .banner .row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .banner button { font-size: 18px; padding: 10px 18px; }
+    .banner .ok { background: #7a4f0e; border-color: #7a4f0e; color: #fff; }
+    .banner .brand-line { font-size: 14px; font-weight: 700; color: #7a4f0e; margin-bottom: 4px; letter-spacing: .02em; }
+    /* Every animation starts and ends fully visible, so a paused or slow tab still shows the notice. */
+    @keyframes kg-pop { 0%, 100% { transform: translate(-50%, 0) scale(1); } 45% { transform: translate(-50%, 0) scale(1.04); } }
+    @keyframes kg-glow { 0%, 100% { box-shadow: 0 14px 40px rgba(0,0,0,.35), 0 0 0 4px rgba(183,121,31,.25); } 50% { box-shadow: 0 14px 40px rgba(0,0,0,.35), 0 0 0 14px rgba(183,121,31,.35); } }
+    @keyframes kg-nudge { 0%, 100% { transform: translate(-50%, 0); } 25% { transform: translate(calc(-50% - 6px), 0); } 75% { transform: translate(calc(-50% + 6px), 0); } }
+    @media (prefers-reduced-motion: reduce) { .banner { animation: none; } }
+    @media (max-width: 560px) { .banner { gap: 12px; padding: 14px 16px; } .banner .icon { width: 40px; height: 40px; font-size: 24px; } .banner h2 { font-size: 22px; } }
     details.guide { margin: 0 0 20px; border: 1px solid #c9d6d0; border-radius: 12px; background: #f4f8f6; }
     details.guide summary { cursor: pointer; padding: 12px 16px; font-size: 18px; font-weight: 700; list-style: none; }
     details.guide summary::-webkit-details-marker { display: none; }
@@ -166,16 +183,28 @@ const KinGuardUI = (() => {
   function renderMedium(v) {
     const g = KinGuardRules.GUIDES[v.guideKey] || KinGuardRules.GUIDES.generic;
     const learn = g.sources[0];
+    const heading = v.lookalike ? "Check this website's address" : "Be careful on this page";
+    const say = v.explanationForElder || "Something here looks suspicious. Take your time, and check with family before you pay, call, or share anything.";
+    const official = v.lookalike?.official;
     root.innerHTML = `<style>${CSS}</style>
-      <div class="banner" role="status">
-        ${SHIELD}
-        <p><strong>KinGuard:</strong> ${esc(v.explanationForElder || "Something here looks suspicious. Take your time.")}
-          ${realSiteLink(v)} <a href="${esc(learn.url)}" target="_blank" rel="noopener noreferrer">Learn more</a></p>
-        <button class="secondary" data-act="speak">🔊 Read</button>
-        <button class="secondary" data-act="ok">OK</button>
+      <div class="banner" role="alert" aria-labelledby="kg-bh" aria-describedby="kg-bp">
+        <div class="icon" aria-hidden="true">!</div>
+        <div class="body">
+          <div class="brand-line">KinGuard</div>
+          <h2 id="kg-bh">${heading}</h2>
+          <p id="kg-bp">${esc(say)}</p>
+          <div class="links">
+            ${official ? `<a href="https://${esc(official)}" rel="noopener noreferrer">Go to the real ${esc(official)}</a>` : ""}
+            <a href="${esc(learn.url)}" target="_blank" rel="noopener noreferrer">Learn about this scam</a>
+          </div>
+          <div class="row">
+            <button class="ok" data-act="ok">OK, I'll be careful</button>
+            <button class="secondary" data-act="speak">🔊 Read this to me</button>
+          </div>
+        </div>
       </div>`;
     root.querySelector('[data-act="ok"]').onclick = close;
-    root.querySelector('[data-act="speak"]').onclick = () => speak(v.explanationForElder);
+    root.querySelector('[data-act="speak"]').onclick = () => speak(`${heading}. ${say}`);
   }
 
   // "Pause before you pay": a payment page shortly after a scam warning.
