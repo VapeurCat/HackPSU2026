@@ -81,7 +81,7 @@ Bonus moments:
 - `/demo/bank-transfer.html` is a fictional bank's Send money page. **Send payment** records a simulated transaction, the way a bank feed would.
 - `/demo/crypto-atm.html` triggers the crypto ATM hard rule.
 - `/demo/lookalike-login.html?kg-host=arnazon.com` pretends to be on a lookalike address (the `kg-host` trick only works on the local demo server). With its password box, KinGuard shows a full warning with a link to the real amazon.com. A lookalike address without a password or card form gets a small banner instead, once per visit.
-- Gmail: opened emails are checked automatically. Only suspicious ones go to the server for the AI check, and the warning appears inside the email. Try sending yourself an email from a free account with the sender name "Amazon Security".
+- Gmail: every opened email is checked automatically and shows the result above it ("No warning signs found", or a warning). Only suspicious ones go to the server for the AI check. "Ask family for a second opinion" sends any email to the family member. Try sending yourself an email from a free account with the sender name "Amazon Security".
 
 ### Fake scam email for the Gmail demo
 

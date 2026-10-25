@@ -1,11 +1,20 @@
-// KinGuard for Gmail: checks every opened email quietly, warning inside the email only if it looks like a scam,
-// and adds a "Scrutinize this email" button that runs the AI check and always emails the trusted family member.
+// KinGuard for Gmail: every opened email is checked automatically and the result is shown above it,
+// with an "Ask family for a second opinion" button that runs the AI check and emails the trusted family member.
 // Gmail's class names (.a3s, .gD, h2.hP) are unofficial and may change; they work as of now.
 (() => {
   const STYLE = {
-    bar: "margin:10px 0 14px;padding:12px 14px;border:1px solid #c9d6d0;border-radius:10px;background:#edf2ef;font:16px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;color:#16302a",
-    btn: "font:700 16px system-ui,sans-serif;padding:10px 18px;border-radius:8px;border:0;background:#16302a;color:#fff;cursor:pointer",
+    bar: "margin:10px 0 14px;padding:10px 14px;border:1px solid #c9d6d0;border-radius:10px;background:#f4f8f6;font:15px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;color:#16302a",
+    row: "display:flex;align-items:center;gap:12px;flex-wrap:wrap",
+    btn: "font:600 14px system-ui,sans-serif;padding:6px 12px;border-radius:999px;border:1px solid #16302a;background:#fff;color:#16302a;cursor:pointer;margin-left:auto",
     result: "margin-top:10px",
+    // The inbox-row popover reuses the original, larger look.
+    popover: "padding:12px 14px;border:1px solid #c9d6d0;border-radius:10px;background:#edf2ef;font:16px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;color:#16302a",
+  };
+  const STATUS = {
+    checking: ["🛡️ KinGuard is checking this email…", "#55706a"],
+    closer: ["🛡️ KinGuard is taking a closer look…", "#55706a"],
+    clean: ["✅ KinGuard checked this email. No warning signs found.", "#23784f"],
+    cleared: ["✅ KinGuard double-checked this email. It looks OK.", "#23784f"],
   };
 
   function esc(s) {
@@ -54,29 +63,38 @@
       }`;
   }
 
-  // Every opened email is checked on this computer first, for free. Only suspicious ones go to
-  // KinGuard's server for the AI check, and a warning appears inside the email only if something is wrong.
-  function autoCheck(body, bar, result) {
-    const sender = findSender(body);
-    const subject = document.querySelector("h2.hP")?.innerText || "";
-    const text = `Subject: ${subject}\n\n${body.innerText.slice(0, 12000)}`;
-    const local = KinGuardRules.analyze(text, { sender });
-    if (local.risk === "low") return;
-
-    const plain = bar.style.cssText;
+  // Every opened email is checked automatically, and the result is shown above it.
+  // The first check runs on this computer, for free. Only suspicious emails go to KinGuard's server
+  // for the AI check, so normal emails never leave the computer. The family is alerted only for a likely scam.
+  function autoCheck(body, bar, status, result) {
+    const setStatus = (key) => {
+      status.textContent = STATUS[key][0];
+      status.style.color = STATUS[key][1];
+      status.style.display = "";
+    };
     const warn = (v) => {
+      status.style.display = "none"; // the verdict below says it all
       bar.style.borderColor = v.risk === "high" ? "#b42318" : "#c98a12";
       bar.style.background = v.risk === "high" ? "#fce9e7" : "#fbf0dc";
       render(result, v, { auto: true });
     };
+
+    const sender = findSender(body);
+    const subject = document.querySelector("h2.hP")?.innerText || "";
+    const text = `Subject: ${subject}\n\n${body.innerText.slice(0, 12000)}`;
+    const local = KinGuardRules.analyze(text, { sender });
+    if (local.risk === "low") return setStatus("clean");
+
+    const plain = bar.style.cssText;
     if (local.risk === "high") warn(local); // show right away, then add the AI's explanation
+    else setStatus("closer");
 
     chrome.runtime.sendMessage({ type: "EMAIL_CHECK", sender, subject, text }, (v) => {
       if (chrome.runtime.lastError || !v || v.error) return warn(local); // server offline: rules only
       if (v.risk === "low") {
         bar.style.cssText = plain; // the AI cleared it
         result.innerHTML = "";
-        return;
+        return setStatus("cleared");
       }
       warn(v);
     });
@@ -91,25 +109,29 @@
       const bar = document.createElement("div");
       bar.dataset.kinguardBar = "1";
       bar.style.cssText = STYLE.bar;
-      bar.innerHTML = `<button type="button" style="${STYLE.btn}">🔍 Scrutinize this email</button>
-        <span style="margin-left:10px;color:#55706a">Checks for scams and sends it to your family</span>
-        <div style="${STYLE.result}" aria-live="polite"></div>`;
+      bar.innerHTML = `<div style="${STYLE.row}">
+          <span data-status aria-live="polite" style="font-weight:600;color:${STATUS.checking[1]}">${STATUS.checking[0]}</span>
+          <button type="button" style="${STYLE.btn}" title="Sends this email to your family member with KinGuard's verdict">Ask family for a second opinion</button>
+        </div>
+        <div data-result style="${STYLE.result}" aria-live="polite"></div>`;
       const btn = bar.querySelector("button");
-      const result = bar.querySelector("div");
+      const status = bar.querySelector("[data-status]");
+      const result = bar.querySelector("[data-result]");
       body.parentElement.insertBefore(bar, body);
-      autoCheck(body, bar, result);
+      autoCheck(body, bar, status, result);
 
       btn.onclick = () => {
         btn.disabled = true;
-        btn.textContent = "Checking…";
-        result.textContent = "";
+        btn.textContent = "Sending…";
         const subject = document.querySelector("h2.hP")?.innerText || "";
         chrome.runtime.sendMessage(
           { type: "SCRUTINIZE", sender: findSender(body), subject, text: body.innerText.slice(0, 12000) },
           (v) => {
-            btn.disabled = false;
-            btn.textContent = "🔍 Scrutinize again";
-            render(result, chrome.runtime.lastError ? null : v);
+            const failed = chrome.runtime.lastError || !v || v.error;
+            btn.disabled = !failed;
+            btn.textContent = failed ? "Ask family for a second opinion" : "✓ Sent to family";
+            status.style.display = "none";
+            render(result, failed ? null : v);
           }
         );
       };
@@ -132,7 +154,7 @@
     popover.dataset.kinguardBar = "1";
     const r = anchor.getBoundingClientRect();
     const left = Math.max(12, Math.min(r.left, window.innerWidth - 392));
-    popover.style.cssText = `${STYLE.bar};position:fixed;z-index:2147483647;top:${r.bottom + 6}px;left:${left}px;width:380px;max-height:60vh;overflow:auto;margin:0;box-shadow:0 10px 30px rgba(0,0,0,.25)`;
+    popover.style.cssText = `${STYLE.popover};position:fixed;z-index:2147483647;top:${r.bottom + 6}px;left:${left}px;width:380px;max-height:60vh;overflow:auto;margin:0;box-shadow:0 10px 30px rgba(0,0,0,.25)`;
     popover.innerHTML = `<button type="button" aria-label="Close" style="float:right;border:0;background:none;font-size:20px;line-height:1;cursor:pointer;color:#55706a">×</button>
       <div aria-live="polite">Checking…</div>
       <div style="margin-top:8px;font-size:13px;color:#55706a">Checked from the preview. Open the email for a full check.</div>`;
