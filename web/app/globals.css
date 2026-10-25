@@ -1269,6 +1269,16 @@ html[data-size="large"] body {
   overflow: hidden;
   padding: 30px 24px 186px;
 }
+/* "Something suspicious": an amber haze at the top of the sky that thins out toward the water. */
+.band[data-level="warn"] {
+  background:
+    linear-gradient(180deg, rgba(240, 196, 120, 0.5) 0%, rgba(240, 196, 120, 0.28) 30%, rgba(240, 196, 120, 0.1) 60%, rgba(240, 196, 120, 0) 85%),
+    #e8eeeb;
+  color: var(--ink);
+}
+.band[data-level="warn"] .status-sub {
+  color: var(--muted);
+}
 /* A dawn sky: mist at the top, warming slightly toward the horizon. */
 .band[data-level="safe"] {
   background: linear-gradient(180deg, #e6eeec 0%, #ebefea 55%, #f2ece3 100%);
