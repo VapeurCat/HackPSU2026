@@ -1655,8 +1655,19 @@ section h2,
 .band[data-level="danger"] .sand-dry {
   stop-color: #b8a48d;
 }
-.band[data-level="danger"] .header-tools button,
-.band[data-level="danger"] .header-tools summary {
+.band[data-level="danger"] .header-tools .dev-toggle {
   color: #fff;
   border-color: rgba(255, 255, 255, 0.45);
+}
+/* Delete cache: a solid coral button, so it stands out in the DEV menu. */
+.dev-panel .btn-danger {
+  width: 100%;
+  margin-top: 14px;
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+.dev-panel .btn-danger:hover {
+  background: #86331f;
+  border-color: #86331f;
 }
