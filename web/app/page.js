@@ -119,6 +119,15 @@ function Sea() {
           <path d={wavePath(76, 6)} strokeWidth="1.1" opacity="0.38" vectorEffect="non-scaling-stroke" />
         </g>
       </svg>
+      {/* The shoreline: wet sand, a darker tide line, and foam that laps in and out over it. */}
+      <svg className="band-shore" viewBox="0 0 1200 44" preserveAspectRatio="none" aria-hidden="true">
+        <path className="shore-sand" d={`${wavePath(20, 5)} L 2400 44 L 0 44 Z`} />
+        <path className="shore-wet" d={wavePath(24, 4)} fill="none" vectorEffect="non-scaling-stroke" />
+        <g className="shore-foam">
+          <path d={wavePath(17, 5)} fill="none" strokeWidth="5" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          <path className="shore-bubbles" d={wavePath(10, 4)} fill="none" strokeWidth="3" strokeLinecap="round" strokeDasharray="0.1 14" vectorEffect="non-scaling-stroke" />
+        </g>
+      </svg>
       <svg className="band-light" width="230" height="160" viewBox="0 0 230 160" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
         <circle className="band-sun" cx="78" cy="78" r="30" strokeWidth="1.2" />
         <path d="M30 34 q 6 -6 12 0 q 6 -6 12 0" strokeWidth="1.2" opacity="0.7" />
