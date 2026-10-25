@@ -12,7 +12,39 @@ async function call(path, body) {
   return res.json();
 }
 
+// Trusted sites come from the backend, with a copy kept in the browser for when the server is offline.
+async function trustedHosts() {
+  try {
+    const res = await fetch(`${API}/api/trusted`);
+    if (!res.ok) throw new Error(String(res.status));
+    const { hosts } = await res.json();
+    await chrome.storage.local.set({ trustedHosts: hosts });
+    return hosts;
+  } catch {
+    const { trustedHosts: saved } = await chrome.storage.local.get("trustedHosts");
+    return saved || [];
+  }
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
+  if (msg.type === "IS_TRUSTED") {
+    const host = String(msg.host || "").toLowerCase().replace(/^www\./, "");
+    trustedHosts()
+      .then((hosts) => reply({ trusted: hosts.includes(host) }))
+      .catch(() => reply({ trusted: false }));
+    return true;
+  }
+
+  if (msg.type === "TRUST_SITE") {
+    call("/api/trusted", { host: msg.host })
+      .then(async (r) => {
+        await trustedHosts(); // refresh the browser's copy
+        reply(r);
+      })
+      .catch((e) => reply({ error: e.message }));
+    return true;
+  }
+
   if (msg.type === "ANALYZE") {
     call("/api/analyze", { source: "web", url: msg.url, title: msg.title, text: msg.text, sensitiveForm: msg.sensitiveForm })
       .then(reply)

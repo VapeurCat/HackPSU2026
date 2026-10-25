@@ -1,4 +1,4 @@
-// Clears alerts, events and emails and restores a normal week of transactions. Use before each demo run.
+// Clears alerts, events and emails (keeps Settings). Use before each demo run.
 import { reset } from "@/lib/db";
 
 export const runtime = "nodejs";

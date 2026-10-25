@@ -13,9 +13,6 @@ function whenOf(ts) {
   const sameDay = d.toDateString() === today.toDateString();
   return sameDay ? timeOf(ts) : d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
 }
-function money(n) {
-  return `$${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
 function sourceName(s) {
   return { web: "Web page", gmail: "Email", paste: "Checked message", bank: "Bank" }[s] || s;
 }
@@ -43,7 +40,6 @@ function StatusBand({ data, refresh }) {
   const name = data.person.name;
   const family = data.family[0]?.name || "you";
   const open = data.alerts.filter((a) => a.status === "open");
-  const correlated = open.find((a) => a.kind === "correlated");
   const paying = open.find((a) => a.kind === "pay_attempt");
   const recentMedium = data.events.some((e) => e.risk === "medium" && Date.now() - Date.parse(e.ts) < 24 * 3600e3);
 
@@ -51,14 +47,10 @@ function StatusBand({ data, refresh }) {
   let line = `${name} looks safe.`;
   let sub = "No scam warnings right now. KinGuard is watching the browser, email and bank activity.";
 
-  if (paying && !correlated) {
+  if (paying) {
     level = "danger";
     line = `${name} may be about to pay a scammer.`;
     sub = `KinGuard paused a payment page at ${timeOf(paying.ts)} and alerted ${family}. Call ${name} now.`;
-  } else if (correlated) {
-    level = "danger";
-    line = `${name} may be in a scam right now.`;
-    sub = `${correlated.title}. ${family} was emailed at ${timeOf(correlated.ts)}. Call ${name} before more money moves.`;
   } else if (open.length) {
     level = "danger";
     line = `${name} ran into a likely scam.`;
@@ -156,8 +148,6 @@ function Guide({ guide, help }) {
 }
 
 function AlertCard({ alert, data, onStatus, startOpen = false }) {
-  const events = alert.eventIds.map((id) => data.events.find((e) => e.id === id)).filter(Boolean);
-  const txs = (alert.txIds || []).map((id) => data.transactions.find((t) => t.id === id)).filter(Boolean);
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState(startOpen);
   const bodyId = `alert-body-${alert.id}`;
@@ -188,7 +178,7 @@ function AlertCard({ alert, data, onStatus, startOpen = false }) {
     >
       <h3 className="alert-heading">
         <button type="button" className="alert-toggle" aria-expanded={expanded} aria-controls={bodyId} onClick={() => setExpanded((x) => !x)}>
-          <span className="alert-title">{alert.kind === "correlated" ? `🚨 ${alert.title}` : alert.title}</span>
+          <span className="alert-title">{alert.title}</span>
           <span className="when">{timeOf(alert.ts)}</span>
           <span className="chevron" aria-hidden="true">▾</span>
         </button>
@@ -230,23 +220,6 @@ function AlertCard({ alert, data, onStatus, startOpen = false }) {
         </details>
       )}
 
-      {alert.kind === "correlated" && (
-        <ol className="chain" aria-label="What happened">
-          {events.map((e) => (
-            <li key={e.id}>
-              ⚠️ {timeOf(e.ts)}: {e.scamTypeName} ({sourceName(e.source).toLowerCase()}: {e.title})
-            </li>
-          ))}
-          <li className="gap">
-            {alert.minutesApart} minute{alert.minutesApart === 1 ? "" : "s"} apart
-          </li>
-          {txs.map((t) => (
-            <li key={t.id}>
-              💸 {timeOf(t.ts)}: {money(t.amount)} at {t.merchant}
-            </li>
-          ))}
-        </ol>
-      )}
 
       <Signs cues={alert.cues} />
 
@@ -305,7 +278,7 @@ function Alerts({ data, onStatus }) {
 const FILTERS = [
   ["all", "Everything"],
   ["scam", "Scam checks"],
-  ["money", "Money"],
+  ["money", "Payments"],
   ["email", "Email"],
 ];
 
@@ -313,12 +286,8 @@ function Timeline({ data }) {
   const [filter, setFilter] = useState("all");
 
   const items = useMemo(() => {
-    const evs = data.events.map((e) => ({ ...e, kind: e.type === "transaction_flag" || e.type === "payment_attempt" ? "money" : e.source === "gmail" ? "email" : "scam" }));
-    const flaggedTxIds = new Set(data.events.filter((e) => e.txId).map((e) => e.txId));
-    const txs = data.transactions
-      .filter((t) => !flaggedTxIds.has(t.id))
-      .map((t) => ({ id: t.id, ts: t.ts, kind: "money", risk: "low", title: `${money(t.amount)} at ${t.merchant}`, source: "bank", scamTypeName: t.category }));
-    return [...evs, ...txs]
+    const evs = data.events.map((e) => ({ ...e, kind: e.type === "payment_attempt" ? "money" : e.source === "gmail" ? "email" : "scam" }));
+    return evs
       .filter((i) => filter === "all" || i.kind === filter || (filter === "scam" && i.kind === "email"))
       .sort((a, b) => Date.parse(b.ts) - Date.parse(a.ts))
       .slice(0, 40);
@@ -327,7 +296,7 @@ function Timeline({ data }) {
   return (
     <section aria-labelledby="tl-h">
       <h2 id="tl-h">{data.person.name}'s timeline</h2>
-      <p className="section-note">Every warning and payment in one place, so the clues can be connected.</p>
+      <p className="section-note">Every warning in one place, so the clues can be connected.</p>
       <div className="filters" role="group" aria-label="Filter timeline">
         {FILTERS.map(([key, label]) => (
           <button key={key} className="chip" aria-pressed={filter === key} onClick={() => setFilter(key)}>
@@ -359,31 +328,6 @@ function Timeline({ data }) {
           ))}
         </ol>
       )}
-    </section>
-  );
-}
-
-function MoneyWatch({ data }) {
-  return (
-    <section aria-labelledby="money-h">
-      <h2 id="money-h">Money watch</h2>
-      <p className="section-note">Gift cards, crypto, wires and payment apps to new people get flagged.</p>
-      <div className="panel">
-        <table className="tx">
-          <tbody>
-            {data.transactions.slice(0, 8).map((t) => (
-              <tr key={t.id} data-flag={t.flagged ? t.flagSeverity : undefined}>
-                <td>
-                  {t.merchant}
-                  {t.flagged && <span className="flag">{t.flagReason}</span>}
-                  <span className="tl-meta">{whenOf(t.ts)}</span>
-                </td>
-                <td className="amt">{money(t.amount)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
     </section>
   );
 }
@@ -491,6 +435,13 @@ function SettingsMenu({ data, refresh }) {
     return true;
   };
 
+  const untrust = async (host) => {
+    setBusy(true);
+    await post("/api/trusted", { host }, "DELETE");
+    await refresh();
+    setBusy(false);
+  };
+
   const test = async () => {
     if (!(await save())) return;
     setBusy(true);
@@ -559,6 +510,31 @@ function SettingsMenu({ data, refresh }) {
               </label>
             </fieldset>
 
+            <fieldset>
+              <legend>Trusted sites</legend>
+              <p className="set-note">
+                Sites where {data.person.name} chose “Trust this site”. KinGuard doesn't show yellow notices there, but red scam warnings
+                still appear.
+              </p>
+              {(data.trustedSites || []).length === 0 ? (
+                <p className="set-note">None yet.</p>
+              ) : (
+                <ul className="trusted-list">
+                  {data.trustedSites.map((t) => (
+                    <li key={t.host}>
+                      <span>
+                        <strong>{t.host}</strong>
+                        <small>Trusted {whenOf(t.ts)}</small>
+                      </span>
+                      <button type="button" className="btn" onClick={() => untrust(t.host)} disabled={busy}>
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </fieldset>
+
             {tests && (
               <div className="set-tests" role="status">
                 <strong>Test results</strong>
@@ -614,7 +590,6 @@ function DevMenu({ data, refresh }) {
     await refresh();
     setBusy(false);
   };
-  const simulate = (preset) => run(() => post("/api/transactions", { preset }));
   const reset = () => {
     if (!confirm("Clear all alerts, timeline events and emails?")) return;
     run(() => post("/api/reset"));
@@ -637,13 +612,6 @@ function DevMenu({ data, refresh }) {
             <li data-on={data.config.voice}>{data.config.voice ? "ElevenLabs voice on" : "Browser voice (add an ElevenLabs key)"}</li>
           </ul>
 
-          <h3>Simulate a purchase</h3>
-          <div className="sim">
-            <button className="btn" disabled={busy} onClick={() => simulate("giftcards")}>$500 gift cards</button>
-            <button className="btn" disabled={busy} onClick={() => simulate("cryptoatm")}>$2,000 crypto ATM</button>
-            <button className="btn" disabled={busy} onClick={() => simulate("zelle")}>$1,200 Zelle</button>
-            <button className="btn" disabled={busy} onClick={() => simulate("groceries")}>Normal groceries</button>
-          </div>
 
           <h3>Demo pages</h3>
           <ul className="demo-links">
@@ -652,7 +620,7 @@ function DevMenu({ data, refresh }) {
             <li><a href="/demo/investment.html" target="_blank">Fake crypto investment (pig butchering)</a></li>
             <li><a href="/demo/injection.html" target="_blank">Page that tries to fool the AI</a></li>
             <li><a href="/demo/safe-store.html" target="_blank">Gift card store (quiet, unless right after a scam)</a></li>
-            <li><a href="/demo/bank-transfer.html" target="_blank">Bank: send money (pauses right after a scam)</a></li>
+            <li><a href="/demo/bank-transfer.html" target="_blank">Bank send-money page (pauses right after a scam)</a></li>
             <li><a href="/demo/lookalike-login.html?kg-host=arnazon.com" target="_blank">Lookalike address: arnazon.com sign-in</a></li>
           </ul>
 
@@ -703,7 +671,6 @@ export default function Dashboard() {
           <Timeline data={data} />
         </div>
         <div className="col">
-          <MoneyWatch data={data} />
           <Outbox data={data} />
           <About data={data} />
         </div>

@@ -1,11 +1,10 @@
 // The core: rules -> Gemini -> timeline -> alerts -> correlation -> family email.
 import KinGuardRules from "./rules.cjs";
 import { load, update, newId, familyContact } from "./db.js";
-import { analyzeWithGemini, explainCorrelation, geminiEnabled } from "./gemini.js";
+import { analyzeWithGemini, geminiEnabled } from "./gemini.js";
 import { buildAlertEmail, sendFamilyEmail } from "./email.js";
 
-const { analyze, flagTransaction, maxRisk, RANK } = KinGuardRules;
-const CORRELATION_WINDOW_MIN = 120;
+const { analyze, maxRisk, RANK } = KinGuardRules;
 const PAUSE_WINDOW_MIN = 120; // a payment page this soon after a high-risk scam warning gets paused
 
 const AI_CUE_LABELS = {
@@ -287,7 +286,6 @@ export async function analyzeContent(input, { forceAI = false, alwaysNotify = fa
     }
   }
 
-  const correlated = await checkCorrelation();
 
   return {
     risk: verdict.risk,
@@ -306,170 +304,7 @@ export async function analyzeContent(input, { forceAI = false, alwaysNotify = fa
     alertId: alert?.id || null,
     notified,
     familyName: db.family[0]?.name || "your family",
-    correlatedAlertId: correlated?.id || null,
   };
-}
-
-/** Record a transaction (from the Simulate purchase buttons, or Plaid later). */
-export async function recordTransaction(txInput) {
-  const tx = {
-    id: newId("tx"),
-    ts: new Date().toISOString(),
-    merchant: txInput.merchant,
-    category: txInput.category,
-    amount: Number(txInput.amount),
-    newPayee: Boolean(txInput.newPayee),
-  };
-  const flag = flagTransaction(tx);
-  if (flag) {
-    tx.flagged = true;
-    tx.flagReason = flag.reason;
-    tx.flagSeverity = flag.severity;
-  }
-  update((db) => db.transactions.unshift(tx));
-
-  if (flag) {
-    const event = {
-      id: newId("ev"),
-      ts: tx.ts,
-      source: "bank",
-      type: "transaction_flag",
-      title: `$${tx.amount.toFixed(2)} at ${tx.merchant}`,
-      risk: flag.severity,
-      scamTypeName: flag.reason,
-      cues: [],
-      txId: tx.id,
-    };
-    update((db) => db.events.unshift(event));
-
-    // A crypto purchase is serious enough to alert on by itself.
-    if (flag.severity === "high") {
-      const db = load();
-      const alert = {
-        id: newId("al"),
-        ts: tx.ts,
-        kind: "money",
-        severity: "high",
-        title: "Crypto purchase detected",
-        explanation: `${db.person.name} spent $${tx.amount.toFixed(2)} at ${tx.merchant}. Crypto payments are a favorite of scammers and are almost impossible to reverse.`,
-        eventIds: [event.id],
-        txIds: [tx.id],
-        cues: [],
-        guideKey: "payment",
-        status: "open",
-        notified: [],
-      };
-      update((d) => d.alerts.unshift(alert));
-      const mail = await notifyFamily(db, {
-        heading: alert.title,
-        subject: `⚠️ KinGuard: $${tx.amount.toFixed(2)} crypto purchase by ${db.person.name}`,
-        explanation: alert.explanation,
-        cues: [],
-        alertId: alert.id,
-        event,
-        extraFacts: [["Merchant", tx.merchant], ["Amount", `$${tx.amount.toFixed(2)}`]],
-        guideKey: "payment",
-      });
-      update((d) => {
-        const a = d.alerts.find((x) => x.id === alert.id);
-        if (a) a.notified.push({ to: mail.to, status: mail.status, ts: mail.ts });
-      });
-    }
-  }
-
-  const correlated = await checkCorrelation();
-  return { tx, correlatedAlertId: correlated?.id || null };
-}
-
-/**
- * The differentiator: link a scam warning and a risky payment that happen close together.
- * A rule decides when to alert; Gemini only writes the explanation.
- */
-export async function checkCorrelation() {
-  const db = load();
-  const now = Date.now();
-  const windowMs = CORRELATION_WINDOW_MIN * 60 * 1000;
-
-  const scamEvents = db.events.filter(
-    (e) => e.type === "scam_check" && RANK[e.risk] >= 1 && now - Date.parse(e.ts) <= windowMs
-  );
-  const flaggedTx = db.transactions.filter((t) => t.flagged && now - Date.parse(t.ts) <= windowMs);
-  if (!scamEvents.length || !flaggedTx.length) return null;
-
-  // Pick the newest payment and the strongest nearby scam event.
-  const tx = flaggedTx[0];
-  const event = [...scamEvents]
-    .filter((e) => Math.abs(Date.parse(tx.ts) - Date.parse(e.ts)) <= windowMs)
-    .sort((a, b) => RANK[b.risk] - RANK[a.risk] || Date.parse(b.ts) - Date.parse(a.ts))[0];
-  if (!event) return null;
-
-  const already = db.alerts.some((a) => a.kind === "correlated" && a.txIds.includes(tx.id) && a.eventIds.includes(event.id));
-  if (already) return null;
-
-  const minutes = Math.max(1, Math.round(Math.abs(Date.parse(tx.ts) - Date.parse(event.ts)) / 60000));
-  const order = Date.parse(tx.ts) >= Date.parse(event.ts) ? "after" : "before";
-  let title = "Possible scam in progress";
-  let explanation = `${db.person.name} made a $${tx.amount.toFixed(2)} payment at ${tx.merchant} ${minutes} minute${minutes === 1 ? "" : "s"} ${order} KinGuard flagged a ${String(
-    event.scamTypeName || "possible scam"
-  ).toLowerCase()}. Together, these look like a scam in progress. Call ${db.person.name} now, before more money moves.`;
-
-  if (geminiEnabled()) {
-    try {
-      const ai = await explainCorrelation({ elderName: db.person.name, event, tx, minutes });
-      if (ai?.title) title = ai.title;
-      if (ai?.explanation_for_family) explanation = ai.explanation_for_family;
-    } catch (e) {
-      console.warn("[KinGuard] Gemini correlation explanation failed:", e.message);
-    }
-  }
-
-  const alert = {
-    id: newId("al"),
-    ts: new Date().toISOString(),
-    kind: "correlated",
-    severity: "high",
-    title,
-    explanation,
-    eventIds: [event.id],
-    txIds: [tx.id],
-    cues: event.cues || [],
-    guideKey: event.guideKey || "payment",
-    minutesApart: minutes,
-    status: "open",
-    notified: [],
-  };
-  update((d) => {
-    // The correlated alert supersedes the single-event alerts it links.
-    d.alerts.forEach((a) => {
-      if (a.status === "open" && a.kind !== "correlated" && (a.eventIds.includes(event.id) || a.txIds.includes(tx.id))) {
-        a.status = "merged";
-        a.mergedInto = alert.id;
-      }
-    });
-    d.alerts.unshift(alert);
-  });
-
-  const mail = await notifyFamily(db, {
-    heading: `🚨 ${title}`,
-    subject: `🚨 KinGuard: ${db.person.name} may be in a scam right now`,
-    explanation,
-    cues: event.cues || [],
-    alertId: alert.id,
-    event,
-    earlier: true,
-    extraFacts: [
-      ["Then the payment", `$${tx.amount.toFixed(2)} at ${tx.merchant} (${tx.flagReason}), ${timeOf(tx.ts)}`],
-      ["Time between them", `${minutes} minute${minutes === 1 ? "" : "s"}`],
-    ],
-    skipIds: db.events.filter((e) => e.txId === tx.id).map((e) => e.id),
-    guideKey: event.guideKey,
-    askKey: "payment",
-  });
-  update((d) => {
-    const a = d.alerts.find((x) => x.id === alert.id);
-    if (a) a.notified.push({ to: mail.to, status: mail.status, ts: mail.ts, channel: "email" });
-  });
-  return alert;
 }
 
 /**

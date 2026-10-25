@@ -4,6 +4,7 @@
 (() => {
   let sentText = "";
   let payChecked = false;
+  let trusted = false; // the person chose "Trust this site" for this site
 
   // Search results pages list snippets and ads from many other sites ("act now", "call today"),
   // which reads like pressure but isn't. Check the sites people actually open instead.
@@ -27,6 +28,7 @@
   const demoHost = location.hostname === "localhost" ? new URLSearchParams(location.search).get("kg-host") : null;
   const host = demoHost || location.hostname;
   const pageUrl = demoHost ? `https://${demoHost}${location.pathname}` : location.href;
+  KinGuardUI.setHost(host);
 
   function check() {
     if (isSearchPage()) return;
@@ -62,6 +64,9 @@
       return;
     }
 
+    // On a trusted site, yellow notices are skipped. Red warnings still show, in case the site is ever hacked.
+    if (trusted && local.risk !== "high") return;
+
     if (local.risk === "low") return;
     sentText = text;
 
@@ -79,8 +84,12 @@
     });
   }
 
-  check();
-  // Scam pages often build their scary content with JavaScript after loading.
-  setTimeout(check, 1500);
-  setTimeout(check, 5000);
+  // First find out whether this site is trusted, then check the page.
+  chrome.runtime.sendMessage({ type: "IS_TRUSTED", host }, (r) => {
+    trusted = !chrome.runtime.lastError && Boolean(r?.trusted);
+    check();
+    // Scam pages often build their scary content with JavaScript after loading.
+    setTimeout(check, 1500);
+    setTimeout(check, 5000);
+  });
 })();

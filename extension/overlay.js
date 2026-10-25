@@ -3,6 +3,11 @@ const KinGuardUI = (() => {
   let host = null;
   let root = null;
   let current = null;
+  let pageHost = location.hostname; // the site being checked (the content script can set a demo address)
+
+  function setHost(h) {
+    pageHost = h;
+  }
 
   const CSS = `
     :host { all: initial; }
@@ -200,11 +205,32 @@ const KinGuardUI = (() => {
           <div class="row">
             <button class="ok" data-act="ok">OK, I'll be careful</button>
             <button class="secondary" data-act="speak">🔊 Read this to me</button>
+            ${official ? "" : `<button class="secondary" data-act="trustsite" title="Stop showing yellow notices on ${esc(pageHost)}">Trust this site</button>`}
           </div>
         </div>
       </div>`;
     root.querySelector('[data-act="ok"]').onclick = close;
     root.querySelector('[data-act="speak"]').onclick = () => speak(`${heading}. ${say}`);
+    // "Trust this site": no more yellow notices here. Not offered on lookalike addresses.
+    const trustBtn = root.querySelector('[data-act="trustsite"]');
+    if (trustBtn) {
+      trustBtn.onclick = () => {
+        trustBtn.disabled = true;
+        trustBtn.textContent = "Saving…";
+        chrome.runtime.sendMessage({ type: "TRUST_SITE", host: pageHost }, (r) => {
+          const body = root.querySelector(".banner .body");
+          if (!body) return;
+          const failed = chrome.runtime.lastError || !r || r.error;
+          body.innerHTML = failed
+            ? `<h2>Couldn't trust this site</h2><p>${esc(r?.error || "KinGuard's server didn't answer. Try again later.")}</p>
+               <div class="row"><button class="ok" data-act="ok">OK</button></div>`
+            : `<h2>✓ ${esc(pageHost)} is trusted</h2>
+               <p>KinGuard won't show yellow notices here anymore. Red scam warnings still appear if something serious shows up. You can undo this in Settings on the KinGuard dashboard.</p>
+               <div class="row"><button class="ok" data-act="ok">OK</button></div>`;
+          root.querySelector('[data-act="ok"]').onclick = close;
+        });
+      };
+    }
   }
 
   // "Pause before you pay": a payment page shortly after a scam warning.
@@ -267,5 +293,5 @@ const KinGuardUI = (() => {
     }
   }
 
-  return { show, pause, close };
+  return { show, pause, close, setHost };
 })();

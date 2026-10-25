@@ -13,8 +13,8 @@ export async function GET() {
   const alerts = db.alerts.map((a) => {
     const e = db.events.find((x) => x.id === a.eventIds?.[0]);
     let facts = factsFor(e);
-    // Pay and payment alerts are about an earlier warning, so label its facts that way.
-    if (a.kind === "pay_attempt" || a.kind === "correlated") facts = facts.map(([k, v]) => [{ What: "Earlier warning", When: "Warned at" }[k] || k, v]);
+    // Pay alerts are about an earlier warning, so label its facts that way.
+    if (a.kind === "pay_attempt") facts = facts.map(([k, v]) => [{ What: "Earlier warning", When: "Warned at" }[k] || k, v]);
     return { ...a, facts, excerpt: e?.excerpt || "" };
   });
   const contact = familyContact(db);

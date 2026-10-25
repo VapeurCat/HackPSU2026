@@ -784,17 +784,6 @@ const KinGuardRules = (() => {
     return "suspicious";
   }
 
-  // Bank-side rule: which transactions look like scam payments?
-  function flagTransaction(tx) {
-    const m = `${tx.merchant || ""} ${tx.category || ""} ${tx.note || ""}`;
-    if (/bitcoin|crypto|coin ?flip|coinme|bitcoin depot/i.test(m)) return { reason: "Crypto purchase or crypto ATM", severity: "high" };
-    if (/gift ?card/i.test(m)) return { reason: "Gift card purchase", severity: "medium" };
-    if (/wire|western union|moneygram/i.test(m)) return { reason: "Wire transfer", severity: "medium" };
-    if (/zelle|cash ?app|venmo/i.test(m) && tx.newPayee) return { reason: "Payment app transfer to a new payee", severity: "medium" };
-    if (Number(tx.amount) >= 1000) return { reason: "Unusually large amount", severity: "medium" };
-    return null;
-  }
-
   // ---------- Lookalike addresses (typosquatting) and fake senders ----------
   // Brands scammers imitate most. key: what a lookalike address is compared to.
   // names: how the brand appears in an email's sender name (only distinctive names, to avoid false alarms).
@@ -941,7 +930,7 @@ const KinGuardRules = (() => {
     return (RANK[a] ?? 0) >= (RANK[b] ?? 0) ? a : b;
   }
 
-  return { analyze, flagTransaction, paymentPage, guideFor, lookalikeDomain, senderSpoof, maxRisk, RANK, TYPE_NAMES, ELDER_TEXT, CUES, GUIDES, HELP, HARD_RULE_TEXT };
+  return { analyze, paymentPage, guideFor, lookalikeDomain, senderSpoof, maxRisk, RANK, TYPE_NAMES, ELDER_TEXT, CUES, GUIDES, HELP, HARD_RULE_TEXT };
 })();
 
 if (typeof module !== "undefined" && module.exports) module.exports = KinGuardRules;

@@ -93,17 +93,3 @@ ${String(text).slice(0, 12000)}
   cache.set(key, result);
   return result;
 }
-
-export async function explainCorrelation({ elderName, event, tx, minutes }) {
-  const prompt = `You are KinGuard, protecting an older adult named ${elderName}.
-Two things happened ${minutes} minutes apart:
-1. A scam warning: ${event.scamTypeName || "possible scam"} on ${event.source === "gmail" ? "an email" : "a web page"} titled "${event.title || ""}". Warning signs: ${(event.cues || []).map((c) => c.label || c.cue).join(", ")}.
-2. A payment: $${tx.amount} at "${tx.merchant}" (${tx.flagReason}).
-
-Return JSON only:
-{
-  "title": "short alert title, under 8 words",
-  "explanation_for_family": "2 sentences for their adult child explaining why these two events together suggest a scam in progress and what to do right now"
-}`;
-  return generateJSON(prompt);
-}

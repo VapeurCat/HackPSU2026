@@ -52,28 +52,17 @@
       <div class="done" id="done" role="status"></div>
     </div>
   </div>
-  <p class="note">KinGuard demo page. Lionheart Community Bank is fictional and no money moves. "Send payment" records a simulated transaction on the family dashboard, the way a bank feed would.</p>
+  <p class="note">KinGuard demo page. Lionheart Community Bank is fictional and no money moves. KinGuard pauses this page if it opens right after a scam warning (Pause before you pay).</p>
 <script>
-  document.getElementById("f").addEventListener("submit", async (e) => {
+  document.getElementById("f").addEventListener("submit", (e) => {
     e.preventDefault();
     const btn = document.getElementById("send");
     const payee = document.getElementById("payee").value.trim() || "Unknown recipient";
-    const method = document.getElementById("method").value;
     const amount = Number(document.getElementById("amount").value) || 0;
     btn.disabled = true;
     btn.textContent = "Sending…";
-    await fetch("/api/transactions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        merchant: method === "Wire" ? `Wire transfer to "${payee}"` : `Zelle to new payee "${payee}"`,
-        category: "Transfer",
-        amount,
-        newPayee: true,
-      }),
-    }).catch(() => {});
     const done = document.getElementById("done");
-    done.textContent = `Payment of $${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} sent to ${payee}.`;
+    done.textContent = `Demo only: no money moved. (A real payment of $${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} to ${payee} would have been sent here.)`;
     done.style.display = "block";
     btn.textContent = "Sent";
   });

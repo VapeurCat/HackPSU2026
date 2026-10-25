@@ -29,15 +29,5 @@ for (const [expected, text] of cases) {
   console.log(`      cues: ${r.cues.map((c) => `${c.cue}("${c.quote}")`).join(", ") || "none"}`);
 }
 
-console.log("\nTransactions:");
-for (const tx of [
-  { merchant: "Corner Market", amount: 58.4 },
-  { merchant: "QuickMart (gift cards)", category: "Gift cards", amount: 500 },
-  { merchant: "Bitcoin ATM, Route 26 gas station", amount: 2000 },
-  { merchant: "Zelle to new payee", amount: 1200, newPayee: true },
-]) {
-  console.log(`  ${tx.merchant.padEnd(36)} -> ${JSON.stringify(rules.flagTransaction(tx))}`);
-}
-
 console.log(`\n${pass}/${cases.length} text cases passed`);
 process.exit(pass === cases.length ? 0 : 1);
